@@ -11,17 +11,17 @@ const spotOf = (id: string) => {
 const fullBag = (): Bag => Object.fromEntries(PART_KINDS.map((k) => [k, TARGET[k].id]));
 
 describe('fase 3, missão 1: as peças e a lista', () => {
-  it('a lista tem uma peça de cada tipo, e cada tipo tem peça parecida com outra referência', () => {
+  it('a lista tem uma peça de cada tipo, e as parecidas têm outro desenho e outra referência', () => {
     expect(PART_KINDS).toHaveLength(8);
     for (const k of PART_KINDS) {
       const want = TARGET[k];
       expect(want.kind).toBe(k);
-      const decoys = PARTS.filter((p) => p.kind === k && p.id !== want.id);
-      expect(decoys.length, k).toBeGreaterThan(0);
-      for (const d of decoys) expect(`${d.brand} ${d.type} ${d.spec}`, d.id).not.toBe(`${want.brand} ${want.type} ${want.spec}`);
+      for (const d of PARTS.filter((p) => p.kind === k && p.id !== want.id)) {
+        expect(d.art, d.id).not.toBe(want.art);
+        expect(`${d.brand} ${d.type} ${d.spec}`, d.id).not.toBe(`${want.brand} ${want.type} ${want.spec}`);
+      }
     }
-    // algumas parecidas têm o mesmo desenho da certa: só o adesivo diferencia
-    expect(PARTS.filter((p) => !p.id.endsWith('-lista') && p.art === TARGET[p.kind].art).length).toBeGreaterThanOrEqual(5);
+    expect(PARTS.filter((p) => !p.id.endsWith('-lista')).length).toBeGreaterThanOrEqual(5);
     expect(new Set(PARTS.map((p) => p.id)).size).toBe(PARTS.length);
   });
 
@@ -76,8 +76,8 @@ describe('fase 3, missão 1: entrega ao Marcos', () => {
 
   it('com todas as certas, passa; com parecidas, devolve só as erradas', () => {
     expect(checkParts(fullBag())).toEqual({ ok: true, right: PART_KINDS, wrong: [] });
-    const r = checkParts({ ...fullBag(), ram: 'ram-ddr3', cooler: 'cooler-lga' });
-    expect(r.ok && r.wrong.map((w) => w.got.id)).toEqual(['cooler-lga', 'ram-ddr3']);
+    const r = checkParts({ ...fullBag(), ram: 'ram-ddr3', processador: 'cpu-lga' });
+    expect(r.ok && r.wrong.map((w) => w.got.id)).toEqual(['cpu-lga', 'ram-ddr3']);
     expect(r.ok && r.right).toHaveLength(6);
   });
 
@@ -86,5 +86,7 @@ describe('fase 3, missão 1: entrega ao Marcos', () => {
     expect(text).toContain('DDR3');
     expect(text).toContain('DDR4 · 8 GB');
     expect(text.startsWith('A memória')).toBe(true);
+    expect(text).toContain('. A da lista');
+    expect(explainWrong('ssd', partById('ssd-sata')!)).toContain('. O da lista é SSD M.2');
   });
 });

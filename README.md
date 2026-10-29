@@ -525,7 +525,7 @@ React abre a tarefa, e a nota vai para a API como nos outros jogos.
       tests/missao-f2m4.test.ts  forca de exemplo, partida resolvida, relógio, volume, onde o tablet cai e a fuga da sala
       tests/missao-f2m5.test.ts  quiz de exemplo do exercício surpresa, nota mínima de 70% e as mensagens
       tests/fim-dia2.test.ts     dispensa do chefe, saída para a calçada e o resumo das 5 missões do 2º dia
-      tests/pecas.test.ts        lista com 8 peças e as parecidas, adesivos, onde as peças caem e a conferência
+      tests/pecas.test.ts        lista com 8 peças e as parecidas (desenho próprio), adesivos, onde as peças caem e a conferência
 
 - **Arte própria.** Tudo é pixel art desenhada pelo `scripts/gerar-arte.py` (tiles de 32 px, 1 pixel de arte = 2 px).
   As imagens de referência (planta do escritório e folhas de personagens) serviram só de inspiração para a disposição
@@ -858,22 +858,20 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
 ### Missão 1: as peças da lista do Marcos (+100 XP)
 
 1. O 3º dia começa (*"Aula: hardware, as peças de dentro do computador"*) e o **Marcos** chama o ESTAGIÁRIO na Sala
-   de TI. Lá, a aula: placa-mãe, processador e cooler (do **mesmo soquete**), memória RAM (do tipo que a placa
-   aceita), HD × SSD, fonte e placa de vídeo. Ele entrega a **lista com 8 peças**, cada uma com **desenho** e
-   **referências** (marca e modelo, tipo e especificações), e a lista abre na tela.
+   de TI. Em duas falas curtas, ele pede para trazer as peças **exatamente como estão na lista** e entrega a **lista
+   com 8 peças**, cada uma com **desenho** e **referências** (marca e modelo, tipo e especificações), que abre na tela.
 2. Os mesmos **móveis com lupa** da fase 2 têm as peças. Procurar usa a mesma animação das placas (cronômetro amarelo,
    bagunça voando) e **várias peças pulam e caem no chão** brilhando. Um dos móveis só tem bagunça.
 3. Chegando perto de uma peça, abre o modal com a **peça na mão do ESTAGIÁRIO** e o **adesivo** colado nela (marca e
    modelo, tipo, especificações), ao lado da **lista do Marcos** na prancheta. O aluno compara o desenho e as
    referências e escolhe **🧰 Guardar na mochila** ou **✕ Deixar aqui** (a peça continua no chão para depois).
-4. Há **12 peças parecidas** para confundir: algumas com o **mesmo desenho** e outra referência (memória DDR4 de
-   4 GB, SSD de 256 GB, HD de 500 GB, placa-mãe e cooler para LGA 1200, fonte de 250 W) e outras com desenho diferente
-   (memória DDR3, memória de notebook, SSD SATA, HD de notebook, processador LGA, placa de vídeo de 2 GB).
+4. Há **6 peças parecidas** para confundir, cada uma com desenho próprio e outra referência: memória DDR3, memória
+   de notebook, SSD SATA, HD de notebook, processador LGA e placa de vídeo de 2 GB.
 5. A mochila leva **uma peça de cada tipo**. Pegando outra do mesmo tipo, o botão vira **⇄ Guardar e deixar a da
    mochila** (a antiga cai no chão). O contador **🧰 N|8** fica no topo, com o botão **📋 Lista** para rever a lista.
 6. Com as 8, é voltar à Sala de TI. O Marcos confere: tudo certo → *"Muito obrigado pela ajuda!"* **+100 XP** e
    comemoração. Com alguma errada → **−50 XP** (aparece com ⚠ no resumo do dia), ele explica cada diferença
-   (*"A memória que você trouxe é DDR4 · 4 GB… A da lista é DDR4 · 8 GB…"*), fica com as certas e devolve as erradas;
+   (*"O SSD que você trouxe é SSD SATA 2,5"… O da lista é SSD M.2 NVMe…"*), fica com as certas e devolve as erradas;
    é procurar as que faltam e voltar. Antes de ter as 8, ele só diz quais tipos ainda faltam.
 
 - **Arte:** as peças no chão e as 14 peças grandes (com o espaço do adesivo) são desenhadas pelo
@@ -943,12 +941,12 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
 24. Fim do 2º dia (`?fase=2&missao=6`, ou seguindo depois da missão 5): o chefe chama → Diretoria → elogio e
     "dispensado por hoje" → sair pela porta principal → caminha até a calçada e comemora → **Ver o resumo do dia** →
     resumo com as 5 missões, XP de hoje e total acumulado → **Jogar o 2º dia de novo** recomeça a fase 2.
-25. Fase 3, missão 1 (`?fase=3`, ou **Começar o 3º dia** no resumo do 2º): o Marcos chama → Sala de TI → aula e a lista
-    abre → fechar → **📋 Lista** no topo abre de novo → estante da Diretoria: 3 peças caem → pegar o processador →
-    adesivo e lista lado a lado → **Guardar** (🧰 1|8) → memória DDR3 → **Guardar** → na prateleira, memória de 4 GB →
-    **Guardar e deixar a da mochila** (a DDR3 cai no chão) → deixar as parecidas → pegar uma de cada tipo (🧰 8|8) →
-    Sala de TI → o Marcos explica a memória errada, **−50 XP**, 🧰 7|8 → pegar a memória certa → entregar →
-    **+100 XP** e comemoração.
+25. Fase 3, missão 1 (`?fase=3`, ou **Começar o 3º dia** no resumo do 2º): o Marcos chama → Sala de TI → duas falas
+    curtas e a lista abre → fechar → **📋 Lista** no topo abre de novo → estante da Diretoria: 2 peças caem → pegar o
+    processador → adesivo e lista lado a lado → **Guardar** (🧰 1|8) → memória DDR3 → **Guardar** → na bancada da Copa,
+    a memória certa → **Guardar e deixar a da mochila** (a DDR3 cai no chão) → no armário da Sala de Reuniões, o SSD
+    SATA → **Guardar** → pegar as outras (🧰 8|8) → Sala de TI → o Marcos explica o SSD errado, **−50 XP**, 🧰 7|8 →
+    pegar o SSD M.2 no armário da Recepção → entregar → **+100 XP** e comemoração.
 
 ## Correções incluídas desde a Fase 1
 

@@ -348,12 +348,8 @@ export const MISSAO_PECAS = {
   dayStart: '☀️ 3º dia de estágio · Aula: hardware, as peças de dentro do computador',
   call: 'ESTAGIÁRIO! Gostei muito do seu trabalho ontem. Passa aqui na Sala de TI? Preciso de ajuda de novo!',
   briefing: [
-    'Bom dia! Hoje vamos montar computadores novos, e a aula de hoje é hardware: as peças que ficam dentro do gabinete.',
-    'A placa-mãe é onde tudo se encaixa. O processador (CPU) faz as contas e precisa de um cooler em cima para não esquentar. A memória RAM guarda o que está sendo usado agora e apaga quando desliga.',
-    'O HD e o SSD guardam os arquivos de vez: o HD tem um disco girando; o SSD é só chip, bem mais rápido. A fonte transforma a energia da tomada para as peças, e a placa de vídeo cuida da imagem no monitor.',
-    'Atenção: processador, cooler e placa-mãe precisam ser do mesmo soquete, senão não encaixam! E a memória tem que ser do tipo que a placa-mãe aceita.',
-    'As peças estão espalhadas nos armários da empresa: procure nos móveis com uma lupa em cima. Aqui está a lista, com o desenho e as referências de cada peça.',
-    'Cuidado: tem peça parecida com outra referência! Leia o adesivo de cada uma e compare com a lista antes de guardar. Quando tiver as 8, traga aqui: peça errada eu devolvo e você perde 50 XP.',
+    'Bom dia! Vou montar computadores novos e preciso destas 8 peças. Aqui está a lista: traga cada uma exatamente como está nela.',
+    'Elas estão nos móveis com uma lupa em cima. Leia o adesivo de cada peça e compare com a lista antes de guardar: peça errada eu devolvo e você perde 50 XP.',
   ],
   noneYet: 'Ainda não trouxe nenhuma peça? Procure nos móveis com uma lupa em cima e compare cada peça com a lista!',
   missing: (names: string[]) =>
@@ -369,6 +365,5 @@ export const MISSAO_PECAS = {
     n === 1 ? 'Hmm… 1 peça não é a da lista. Vou ter que tirar 50 XP.' : `Hmm… ${n} peças não são as da lista. Vou ter que tirar 50 XP.`,
   keepRight: (n: number) =>
     n ? `As outras ${n} estão certas: essas eu já guardei aqui. Procure as que faltam e me traga.` : 'Procure as certas e me traga.',
-  success:
-    'Todas certinhas: placa-mãe, processador e cooler do mesmo soquete, memória DDR4, SSD, HD, fonte e placa de vídeo. Muito obrigado pela ajuda, estagiário!',
+  success: 'Todas certinhas, iguais à lista! Muito obrigado pela ajuda, estagiário!',
 } as const;

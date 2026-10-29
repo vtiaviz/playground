@@ -1,12 +1,12 @@
 // Fase 3, missão 1 (aula: hardware, os componentes internos): as peças espalhadas pelos armários da empresa.
-// O Marcos dá uma lista com 8 peças (uma de cada tipo), cada uma com desenho e referências; pelos armários há peças
-// parecidas, com outras referências no adesivo, para confundir. Este arquivo não depende de React nem do Phaser
-// (testado com vitest).
+// O Marcos dá uma lista com 8 peças (uma de cada tipo), cada uma com desenho e referências; pelos armários há algumas
+// peças parecidas (memória de outro tipo, HD de notebook…), com outro desenho e outro adesivo. Este arquivo não depende
+// de React nem do Phaser (testado com vitest).
 import { HIDEOUTS } from './placas';
 
 export type PartKind = 'hd' | 'ssd' | 'placa-mae' | 'ram' | 'processador' | 'cooler' | 'fonte' | 'placa-video';
 
-/** Desenho grande da peça (`src/assets/pecas/<art>.png`); peças parecidas usam o mesmo desenho. */
+/** Desenho grande da peça (`src/assets/pecas/<art>.png`). */
 export type PartArt =
   | 'hd-35'
   | 'hd-25'
@@ -50,26 +50,20 @@ export const PART_KINDS: PartKind[] = ['placa-mae', 'processador', 'cooler', 'ra
 
 const part = (id: string, kind: PartKind, art: PartArt, brand: string, type: string, spec: string): Part => ({ id, kind, art, brand, type, spec });
 
-/** Todas as peças escondidas: a da lista (`*-lista`) e as parecidas. As marcas são inventadas. */
+/** Todas as peças escondidas: a da lista (`*-lista`) e as parecidas, cada uma com desenho próprio. As marcas são inventadas. */
 export const PARTS: Part[] = [
   part('mb-lista', 'placa-mae', 'mb-matx', 'TERRA B450M', 'Micro-ATX · soquete AM4', 'Memória DDR4'),
-  part('mb-lga', 'placa-mae', 'mb-matx', 'TERRA H410M', 'Micro-ATX · soquete LGA 1200', 'Memória DDR4'),
   part('cpu-lista', 'processador', 'cpu-am4', 'NUCLEO R5 3600', 'Soquete AM4', '6 núcleos · 3,6 GHz'),
   part('cpu-lga', 'processador', 'cpu-lga', 'NUCLEO i5 10400', 'Soquete LGA 1200', '6 núcleos · 2,9 GHz'),
   part('cooler-lista', 'cooler', 'cooler', 'GELO T120', 'Para soquete AM4', 'Ventoinha 120 mm'),
-  part('cooler-lga', 'cooler', 'cooler', 'GELO T120i', 'Para soquete LGA 1200', 'Ventoinha 120 mm'),
   part('ram-lista', 'ram', 'ram-ddr4', 'KRONO KR8G32', 'DDR4 · 8 GB', '3200 MHz'),
-  part('ram-4gb', 'ram', 'ram-ddr4', 'KRONO KR4G26', 'DDR4 · 4 GB', '2666 MHz'),
   part('ram-ddr3', 'ram', 'ram-ddr3', 'KRONO KR8G16', 'DDR3 · 8 GB', '1600 MHz'),
   part('ram-sodimm', 'ram', 'ram-sodimm', 'KRONO KS8G32', 'DDR4 SODIMM (notebook) · 8 GB', '3200 MHz'),
   part('ssd-lista', 'ssd', 'ssd-m2', 'RAPIDO NV500', 'SSD M.2 NVMe', '500 GB'),
-  part('ssd-256', 'ssd', 'ssd-m2', 'RAPIDO NV256', 'SSD M.2 NVMe', '256 GB'),
   part('ssd-sata', 'ssd', 'ssd-sata', 'RAPIDO S500', 'SSD SATA 2,5"', '500 GB'),
   part('hd-lista', 'hd', 'hd-35', 'DISKAR DK1000', 'HD SATA 3,5"', '1 TB · 7200 RPM'),
-  part('hd-500', 'hd', 'hd-35', 'DISKAR DK500', 'HD SATA 3,5"', '500 GB · 7200 RPM'),
   part('hd-notebook', 'hd', 'hd-25', 'DISKAR DN1000', 'HD SATA 2,5" (notebook)', '1 TB · 5400 RPM'),
   part('fonte-lista', 'fonte', 'fonte', 'VOLTZ 500B', 'Fonte ATX · 500 W', 'Selo 80 Plus Bronze'),
-  part('fonte-250', 'fonte', 'fonte', 'VOLTZ 250G', 'Fonte ATX · 250 W', 'Sem selo de eficiência'),
   part('gpu-lista', 'placa-video', 'gpu-2', 'PIXEL GX4', 'PCI Express x16', '4 GB GDDR6 · 2 ventoinhas'),
   part('gpu-2gb', 'placa-video', 'gpu-1', 'PIXEL GX2', 'PCI Express x16', '2 GB GDDR5 · 1 ventoinha'),
 ];
@@ -86,14 +80,14 @@ export const partRef = (p: Part) => `${p.type}, ${p.spec}`;
 
 /** Em que móvel (os mesmos esconderijos com lupa da fase 2) está cada peça; um deles tem só bagunça. */
 export const PART_HIDEOUTS: { hideout: string; parts: string[] }[] = [
-  { hideout: 'estante-diretoria', parts: ['cpu-lista', 'ram-ddr3', 'gpu-2gb'] },
+  { hideout: 'estante-diretoria', parts: ['cpu-lista', 'ram-ddr3'] },
   { hideout: 'armario-reuniao', parts: ['ssd-sata'] },
-  { hideout: 'prateleira-1', parts: ['fonte-250', 'cooler-lista', 'ram-4gb'] },
-  { hideout: 'prateleira-2', parts: ['hd-lista', 'cpu-lga', 'ssd-256'] },
-  { hideout: 'arquivo-impressao', parts: ['mb-lga'] },
-  { hideout: 'arquivo-impressao-verde', parts: [] },
-  { hideout: 'bancada-copa', parts: ['ram-lista', 'hd-500'] },
-  { hideout: 'arquivo-1', parts: ['gpu-lista', 'cooler-lga'] },
+  { hideout: 'prateleira-1', parts: ['cooler-lista'] },
+  { hideout: 'prateleira-2', parts: ['hd-lista', 'cpu-lga'] },
+  { hideout: 'arquivo-impressao', parts: [] },
+  { hideout: 'arquivo-impressao-verde', parts: ['gpu-2gb'] },
+  { hideout: 'bancada-copa', parts: ['ram-lista'] },
+  { hideout: 'arquivo-1', parts: ['gpu-lista'] },
   { hideout: 'arquivo-2', parts: ['mb-lista', 'ram-sodimm'] },
   { hideout: 'arquivo-verde', parts: ['fonte-lista', 'hd-notebook'] },
   { hideout: 'armario-recepcao', parts: ['ssd-lista'] },
@@ -138,5 +132,6 @@ export function checkParts(bag: Bag, delivered: Iterable<PartKind> = []): PartsC
 export function explainWrong(kind: PartKind, got: Part) {
   const want = TARGET[kind];
   const name = KINDS[kind].the;
-  return `${name[0].toUpperCase()}${name.slice(1)} que você trouxe é ${partRef(got)} (${got.brand}). A da lista é ${partRef(want)} (${want.brand}).`;
+  const art = name.split(' ')[0].toUpperCase();
+  return `${name[0].toUpperCase()}${name.slice(1)} que você trouxe é ${partRef(got)} (${got.brand}). ${art} da lista é ${partRef(want)} (${want.brand}).`;
 }
