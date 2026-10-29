@@ -34,7 +34,8 @@ describe('levantamento: os equipamentos no mapa', () => {
     const count = realCount();
     for (const t of COMPUTER_TYPES) expect(count[t.id], t.id).toBeGreaterThan(0);
     const rooms = new Set(SURVEY_DEVICES.map((d) => d.room));
-    for (const r of ROOMS.filter((r) => r.id !== 'entrada')) expect(rooms.has(r.id), r.id).toBe(true);
+    // o banheiro (fase 3) não tem computador
+    for (const r of ROOMS.filter((r) => r.id !== 'entrada' && r.id !== 'banheiro')) expect(rooms.has(r.id), r.id).toBe(true);
     expect(new Set(SURVEY_DEVICES.map((d) => d.id)).size).toBe(SURVEY_DEVICES.length);
   });
 

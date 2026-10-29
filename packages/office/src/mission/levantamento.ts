@@ -205,6 +205,7 @@ const ROOM_IN: Record<RoomId, string> = {
   copa: 'na Copa',
   ti: 'na Sala de TI',
   arquivo: 'no Arquivo',
+  banheiro: 'no Banheiro',
   trabalho: 'na Área de Trabalho',
   recepcao: 'na Recepção',
   entrada: 'na entrada',

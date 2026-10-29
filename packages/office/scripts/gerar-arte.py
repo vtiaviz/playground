@@ -99,7 +99,7 @@ def noise(x, y, seed=0):
 # ---------------------------------------------------------------- tiles
 
 TILE_ORDER = ['void', 'wood', 'carpet', 'grey', 'beige', 'wall', 'face', 'door', 'glass', 'pave', 'facebase',
-              'glassopen', 'sidewalk', 'mat', 'lane']
+              'glassopen', 'sidewalk', 'mat', 'lane', 'ceramic', 'tileface', 'tilefacebase']
 TILE_INDEX = {k: i for i, k in enumerate(TILE_ORDER)}
 
 
@@ -228,6 +228,35 @@ def tile_lane(c, ox):
     c.rect(ox + 2, 7, 10, 2, '#e0b84a')
 
 
+def tile_ceramic(c, ox):
+    # piso do banheiro: lajotas brancas de 8 px com rejunte
+    for y in range(T):
+        for x in range(T):
+            col = '#e9eef2' if noise(x, y, 9) > 0.15 else '#e1e7ec'
+            if x % 8 == 0 or y % 8 == 0:
+                col = '#b9c4cd'
+            c.p(ox + x, y, col)
+
+
+def tile_tileface(c, ox):
+    # parede do banheiro (de frente): azulejos azul-claro
+    for y in range(T):
+        for x in range(T):
+            col = '#bfe0ea' if noise(x, y, 10) > 0.15 else '#b5d8e3'
+            if x % 8 == 0 or y % 8 == 0:
+                col = '#93bccb'
+            c.p(ox + x, y, col)
+    c.hline(ox, 0, T, '#7fa9b8')
+
+
+def tile_tilefacebase(c, ox):
+    # azulejo com rodapé de cerâmica escura
+    tile_tileface(c, ox)
+    c.rect(ox, 12, T, 4, '#5f7f8c')
+    c.hline(ox, 12, T, '#7d9eab')
+    c.hline(ox, 15, T, '#3f5a66')
+
+
 def tile_void(c, ox):
     c.rect(ox, 0, T, T, '#232833')
 
@@ -238,6 +267,7 @@ def make_tiles():
         'void': tile_void, 'wood': tile_wood, 'carpet': tile_carpet, 'grey': tile_grey, 'beige': tile_beige,
         'wall': tile_wall, 'face': tile_face, 'facebase': tile_facebase, 'door': tile_door, 'glass': tile_glass,
         'pave': tile_pave, 'glassopen': tile_glassopen, 'sidewalk': tile_sidewalk, 'mat': tile_mat, 'lane': tile_lane,
+        'ceramic': tile_ceramic, 'tileface': tile_tileface, 'tilefacebase': tile_tilefacebase,
     }
     for i, k in enumerate(TILE_ORDER):
         fns[k](c, i * T)
@@ -248,6 +278,7 @@ def make_tiles():
 #  #  topo de parede       F  face da parede (o rodapé é desenhado na última linha de face)
 #  .  piso de madeira      c  carpete     g  piso cinza     b  piso bege (copa)
 #  D  porta (vão)          G  porta de vidro   s  calçada   m  capacho   p/l  rua   ' ' fora do prédio
+#  w  piso do banheiro     Z  face da parede do banheiro (azulejos)
 
 W, H = 48, 35
 
@@ -281,15 +312,19 @@ def build_grid():
     fill(36, 14, 11, 5, 'b')
     fill(35, 15, 1, 2, 'D')
 
-    # TI e arquivo (porta em cima)
+    # TI (porta em cima)
     fill(1, 22, 10, 2, 'F')
     fill(1, 24, 10, 5, 'g')
     fill(6, 21, 2, 1, 'D')
     fill(6, 22, 2, 2, 'g')
-    fill(36, 22, 11, 2, 'F')
-    fill(36, 24, 11, 5, 'g')
-    fill(39, 21, 2, 1, 'D')
-    fill(39, 22, 2, 2, 'g')
+    # arquivo (porta à esquerda, pela recepção) e banheiro (porta em cima, no corredor do meio)
+    fill(36, 22, 5, 2, 'F')
+    fill(36, 24, 5, 5, 'g')
+    fill(35, 25, 1, 2, 'D')
+    fill(42, 22, 5, 2, 'Z')
+    fill(42, 24, 5, 5, 'w')
+    fill(42, 21, 2, 1, 'D')
+    fill(42, 22, 2, 2, 'w')
 
     # entrada e calçada
     fill(21, 29, 5, 1, 'G')
@@ -302,14 +337,16 @@ def build_grid():
 
 def tile_of(grid, x, y):
     ch = grid[y][x]
-    if ch == 'F':
+    if ch in 'FZ':
         below = grid[y + 1][x] if y + 1 < H else '#'
+        if ch == 'Z':
+            return 'tileface' if below == 'Z' else 'tilefacebase'
         return 'face' if below == 'F' else 'facebase'
     return {'#': 'wall', '.': 'wood', 'c': 'carpet', 'g': 'grey', 'b': 'beige', 'D': 'door', 'G': 'glass',
-            'p': 'pave', ' ': 'void', 's': 'sidewalk', 'm': 'mat', 'l': 'lane'}[ch]
+            'p': 'pave', ' ': 'void', 's': 'sidewalk', 'm': 'mat', 'l': 'lane', 'w': 'ceramic'}[ch]
 
 
-SOLID_TILES = ['wall', 'face', 'facebase', 'glass', 'pave', 'void', 'lane']
+SOLID_TILES = ['wall', 'face', 'facebase', 'glass', 'pave', 'void', 'lane', 'tileface', 'tilefacebase']
 
 # ---------------------------------------------------------------- personagens
 
@@ -458,7 +495,31 @@ FRONT_LIFT = [(2, 0), (1, 0), (0, 0), (0, 2), (0, 1), (0, 0)]  # (perna esquerda
 FRONT_ARMS = [(1, -1), (1, -1), (0, 0), (-1, 1), (-1, 1), (0, 0)]
 
 
-def char_front(look, frame, back=False):
+# Fase 3, missão 5: calça molhada (não deu tempo de chegar ao banheiro). A mancha só pinta o que é calça:
+# bem escura, com um brilho azul de molhado em cima, para aparecer mesmo com a calça azul-marinho.
+WET, WET_D, WET_SHINE = '#080b14', '#05070d', '#7fa6e6'
+
+
+def wet_stain(c, x0, x1, y0, y1, drip=(), shine=()):
+    """Escurece a calça entre (x0..x1, y0..y1), mais as gotas `drip` [(x, y)] escorrendo pela perna e o brilho `shine`."""
+    pants = {hexc(PANTS): hexc(WET), hexc(PANTS_D): hexc(WET_D)}
+    cells = [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)] + list(drip)
+    for x, y in cells:
+        if 0 <= x < c.w and 0 <= y < c.h and c.px[x, y] in pants:
+            c.px[x, y] = pants[c.px[x, y]]
+    for x, y in shine:
+        if 0 <= x < c.w and 0 <= y < c.h and c.px[x, y] in (hexc(WET), hexc(WET_D)):
+            c.px[x, y] = hexc(WET_SHINE)
+    return c
+
+
+def wet_front(c, oy):
+    """Mancha de frente (ou de costas): do cavalo até o meio das coxas, escorrendo pela parte de dentro das pernas."""
+    return wet_stain(c, 6, 11, oy, oy + 2, ((7, oy + 3), (8, oy + 3), (9, oy + 3), (10, oy + 3), (8, oy + 4), (9, oy + 4)),
+                     ((7, oy), (8, oy + 1)))
+
+
+def char_front(look, frame, back=False, wet=False):
     """Quadro 18 x 30 de frente (ou de costas). 6 quadros: passo E, apoio, neutro, passo D, apoio, neutro."""
     c = Canvas(18, FH)
     lift_l, lift_r = FRONT_LIFT[frame]
@@ -469,6 +530,8 @@ def char_front(look, frame, back=False):
     draw_legs_front(c, 4, oy + 19, lift_l, lift_r)
     draw_body_front(c, 4, oy + 11, look, arm_l, arm_r, back=back)
     draw_head(c, 4, oy, look, 'up' if back else 'down')
+    if wet:
+        wet_front(c, oy + 19)
     return c.outline()
 
 
@@ -477,7 +540,7 @@ SIDE_LEGS = [(4, -3), (2, -2), (0, 0), (-3, 4), (-2, 2), (0, 0)]  # (pé da fren
 SIDE_LIFT = [0, 0, 2, 0, 0, 2]  # qual pé sobe na passagem: o de trás
 
 
-def char_side(look, frame):
+def char_side(look, frame, wet=False):
     c = Canvas(18, FH)
     front, rear = SIDE_LEGS[frame]
     lift = SIDE_LIFT[frame]
@@ -506,24 +569,29 @@ def char_side(look, frame):
     c.rect(ax, oy + 12, 2, 5, shirt_d)
     c.rect(ax, oy + 17, 2, 2, SKIN)
     draw_head(c, 4, oy, look, 'right')
+    if wet:
+        wet_stain(c, 6, 12, hip_y - 1, hip_y + 2, ((9, hip_y + 3), (10, hip_y + 3), (10, hip_y + 4), (11, hip_y + 3)),
+                  ((10, hip_y), (11, hip_y + 1)))
     return c.outline()
 
 
 def make_estagiario():
-    """Folha 6 x 4: linhas = baixo, esquerda, direita, cima (mesmo formato das folhas de RPG)."""
+    """Folha 6 x 4: linhas = baixo, esquerda, direita, cima (mesmo formato das folhas de RPG).
+    Também gera estagiario-molhado.png: a mesma folha com a calça molhada (fase 3, missão 5)."""
     cols = 6
-    sheet = Image.new('RGBA', (18 * cols * SCALE, FH * 4 * SCALE), (0, 0, 0, 0))
-    right = [char_side(ESTAGIARIO, f) for f in range(6)]
-    rows = [
-        [char_front(ESTAGIARIO, f) for f in range(6)],
-        [Canvas.mirrored(fr) for fr in right],
-        right,
-        [char_front(ESTAGIARIO, f, back=True) for f in range(6)],
-    ]
-    for r, frames in enumerate(rows):
-        for i, fr in enumerate(frames):
-            sheet.paste(fr.scaled(), (i * 18 * SCALE, r * FH * SCALE))
-    sheet.save(os.path.join(ASSETS, 'estagiario.png'))
+    for name, wet in (('estagiario.png', False), ('estagiario-molhado.png', True)):
+        sheet = Image.new('RGBA', (18 * cols * SCALE, FH * 4 * SCALE), (0, 0, 0, 0))
+        right = [char_side(ESTAGIARIO, f, wet) for f in range(6)]
+        rows = [
+            [char_front(ESTAGIARIO, f, wet=wet) for f in range(6)],
+            [Canvas.mirrored(fr) for fr in right],
+            right,
+            [char_front(ESTAGIARIO, f, back=True, wet=wet) for f in range(6)],
+        ]
+        for r, frames in enumerate(rows):
+            for i, fr in enumerate(frames):
+                sheet.paste(fr.scaled(), (i * 18 * SCALE, r * FH * SCALE))
+        sheet.save(os.path.join(ASSETS, name))
 
 
 def make_colegas():
@@ -832,7 +900,7 @@ def f_alarm_panel():
     return c.outline()
 
 
-def cheer(frame):
+def cheer(frame, wet=False):
     """ESTAGIÁRIO comemorando de frente, os dois braços para cima (b = pulando): 18 x 34, pés na linha 31."""
     c = Canvas(18, 34)
     look = ESTAGIARIO
@@ -857,6 +925,8 @@ def cheer(frame):
         c.rect(sx, oy + 6, 2, 7, shirt_l)
         c.rect(sx + out, oy + 2, 2, 5, shirt_l)
         c.rect(sx + out, oy, 2, 2, SKIN)
+    if wet:
+        wet_front(c, oy + 19)
     return c.outline()
 
 
@@ -1409,6 +1479,102 @@ def f_clock():
     c.rect(2, 3, 8, 6, '#f7f8fa')
     c.vline(6, 3, 3, OUT)
     c.hline(6, 6, 2, OUT)
+    return c.outline()
+
+
+# ---------------------------------------------------------------- fase 3, missão 5: o aperto no banheiro
+
+PORCELAIN, PORCELAIN_L, PORCELAIN_D = '#f4f7f9', '#ffffff', '#c6d0d8'
+
+# Letras 3 x 5 para as palavras escritas na parede do banheiro.
+FONT3 = {
+    'A': ('###', '#.#', '###', '#.#', '#.#'), 'B': ('##.', '#.#', '##.', '#.#', '##.'),
+    'C': ('###', '#..', '#..', '#..', '###'), 'D': ('##.', '#.#', '#.#', '#.#', '##.'),
+    'I': ('###', '.#.', '.#.', '.#.', '###'), 'M': ('#.#', '###', '###', '#.#', '#.#'),
+    'P': ('###', '#.#', '###', '#..', '#..'), 'R': ('##.', '#.#', '##.', '#.#', '#.#'),
+    'S': ('###', '#..', '###', '..#', '###'), 'T': ('###', '.#.', '.#.', '.#.', '.#.'),
+    'U': ('#.#', '#.#', '#.#', '#.#', '###'),
+}
+
+
+def write3(c, text, x, y, color):
+    for ch in text:
+        for dy, row in enumerate(FONT3[ch]):
+            for dx, v in enumerate(row):
+                if v == '#':
+                    c.p(x + dx, y + dy, color)
+        x += 4
+
+
+def f_urinal():
+    """Mictório de porcelana pendurado na parede, com o cano da descarga em cima: 12 x 22."""
+    c = Canvas(12, 22)
+    c.rect(5, 0, 2, 5, METAL_L)  # cano
+    c.p(6, 0, METAL)
+    c.rect(4, 4, 4, 2, METAL)  # botão da descarga
+    c.rect(1, 6, 10, 12, PORCELAIN)
+    c.rect(2, 18, 8, 2, PORCELAIN)
+    c.rect(3, 20, 6, 1, PORCELAIN_D)
+    c.vline(1, 7, 10, PORCELAIN_L)
+    c.vline(10, 7, 11, PORCELAIN_D)
+    c.rect(3, 9, 6, 8, '#dfe7ec')  # bacia
+    c.rect(4, 10, 4, 6, '#cfdae1')
+    c.rect(5, 15, 2, 1, '#9fb0bc')  # ralinho
+    return c.outline()
+
+
+def f_wall_words():
+    """Palavras rabiscadas de caneta na parede do banheiro, em cima dos mictórios: 46 x 14."""
+    c = Canvas(46, 14)
+    write3(c, 'CPU', 1, 1, '#2f5f9e')
+    write3(c, 'RAM', 17, 0, '#c0392b')
+    write3(c, 'BIT', 33, 1, '#2d7a3e')
+    write3(c, 'SSD', 6, 8, '#6b3fa0')
+    write3(c, 'USB', 26, 8, '#1c1626')
+    for x in range(19, 24):  # coraçãozinho e risquinhos
+        c.p(x, 10 + (x % 2), '#c0392b')
+    c.p(42, 9, '#2f5f9e')
+    c.p(43, 10, '#2f5f9e')
+    c.p(44, 9, '#2f5f9e')
+    return c
+
+
+def f_wc_sign():
+    """Plaquinha azul do banheiro na parede do corredor (bonequinho branco): 10 x 10."""
+    c = Canvas(10, 10)
+    c.rect(0, 0, 10, 10, '#2f5f9e')
+    c.rect(1, 1, 8, 8, '#457bc0')
+    c.rect(4, 2, 2, 2, '#ffffff')  # cabeça
+    c.rect(3, 4, 4, 3, '#ffffff')  # corpo
+    c.rect(3, 7, 1, 2, '#ffffff')  # pernas
+    c.rect(6, 7, 1, 2, '#ffffff')
+    return c.outline()
+
+
+def f_puddle():
+    """Pocinha amarela no chão (não deu tempo!): 20 x 8."""
+    c = Canvas(20, 8)
+    c.rect(3, 1, 13, 6, '#efdc7a')
+    c.rect(1, 2, 17, 4, '#efdc7a')
+    c.rect(15, 4, 4, 3, '#efdc7a')
+    c.rect(4, 2, 4, 1, '#fff6c2')
+    c.p(12, 3, '#fff6c2')
+    return c.outline(hexc('cdb44f'))
+
+
+def f_urge():
+    """Balão de pensamento com uma gota azul (vontade de fazer xixi), em cima da cabeça: 14 x 18."""
+    c = Canvas(14, 18)
+    c.rect(2, 1, 10, 11, '#ffffff')
+    c.rect(1, 2, 12, 9, '#ffffff')
+    c.p(4, 14, '#ffffff')  # bolinhas do pensamento
+    c.rect(5, 13, 2, 1, '#ffffff')
+    c.p(3, 16, '#ffffff')
+    c.p(7, 3, '#3ea7e8')  # gota
+    c.rect(6, 4, 3, 2, '#3ea7e8')
+    c.rect(5, 6, 5, 3, '#3ea7e8')
+    c.rect(6, 9, 3, 1, '#2a86c4')
+    c.p(6, 6, '#bfe6ff')
     return c.outline()
 
 
@@ -2558,6 +2724,13 @@ def build():
     add('viva-a', cheer('a'), None, 'fx')
     add('estagiario-sentado', intern_seated(), None, 'fx')
     add('viva-b', cheer('b'), None, 'fx')
+    add('viva-molhado-a', cheer('a', wet=True), None, 'fx')
+    add('viva-molhado-b', cheer('b', wet=True), None, 'fx')
+    add('mictorio', f_urinal(), (1, 17, 10, 4))
+    add('palavras-parede', f_wall_words(), None, 'wall')
+    add('placa-banheiro', f_wc_sign(), None, 'wall')
+    add('poca', f_puddle(), None, 'fx')
+    add('vontade', f_urge(), None, 'fx')
     add('painel-alarme', f_alarm_panel(), (3, 22, 8, 4))
     add('placa-arduino', f_board_floor('arduino'), None, 'fx')
     add('placa-raspberry', f_board_floor('raspberry'), None, 'fx')
@@ -2659,14 +2832,20 @@ def build():
     put('colega-0', 5.0, 25.1, 'Colega da TI')
     put('mesa-pc-1', 4.3, 25.9, 'Mesa da TI')
 
-    # Arquivo (x 36-46)
-    for i, tx in enumerate((36.4, 37.5, 41.5, 42.6)):
+    # Arquivo (x 36-40, porta à esquerda)
+    for i, tx in enumerate((36.2, 37.3, 38.4, 39.5)):
         if i == 2:
             put('arquivo-tablet', tx, 23.0 - 9 * SCALE / P, 'Arquivo com tablet')
         else:
             put('arquivo-verde' if i == 3 else 'arquivo', tx, 23.0, 'Arquivo')
-    put('lixeira', 44.0, 24.2, 'Lixeira')
-    put('vaso-grande', 45.2, 23.0, 'Vaso')
+    put('lixeira', 36.3, 27.9, 'Lixeira')
+    put('vaso-grande', 39.6, 26.9, 'Vaso')
+
+    # Banheiro (x 42-46, porta em cima): 3 mictórios com palavras rabiscadas na parede (fase 3, missão 5)
+    put('placa-banheiro', 44.25, 20.7, 'Placa do banheiro')
+    put('palavras-parede', 44.1, 22.15, 'Palavras na parede')
+    for i, tx in enumerate((44.1, 45.15, 46.2)):
+        put('mictorio', tx - 0.05, 23.15, f'Mictório {i + 1}')
 
     # Área de trabalho: 2 fileiras x 3 estações (colega sentado + mesa)
     looks = [0, 1, 2, 3, 4, 2]

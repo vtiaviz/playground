@@ -529,6 +529,7 @@ React abre a tarefa, e a nota vai para a API como nos outros jogos.
       tests/missao-f3m2.test.ts  cruzadas de exemplo da Rita, a corrida do RH até a porta da Copa, bebedouro e o canto da Rita
       tests/montar-pc.test.ts    pedidos dos 3 computadores, ordem de encaixe, cabos de energia e SATA, ligar e as caixas na TI
       tests/missao-f3m4.test.ts  quiz de exemplo da reunião de alinhamento, caminho do chefe e a cadeira da mesa de reunião
+      tests/missao-f3m5.test.ts  mictórios do banheiro, tempo da corrida saindo da Sala de Reuniões e o caça-palavras de exemplo
 
 - **Arte própria.** Tudo é pixel art desenhada pelo `scripts/gerar-arte.py` (tiles de 32 px, 1 pixel de arte = 2 px).
   As imagens de referência (planta do escritório e folhas de personagens) serviram só de inspiração para a disposição
@@ -538,7 +539,8 @@ React abre a tarefa, e a nota vai para a API como nos outros jogos.
 - **Colisão pelos pés:** o corpo do personagem é um retângulo de 20 × 10 px nos sapatos e cada móvel colide só pela
   base. A profundidade é pela posição dos pés, então ele passa **atrás** da parte alta das mesas e estantes.
 - **Salas:** Diretoria, Sala de Reuniões, RH, Financeiro, Impressão e Almoxarifado, Copa, Sala de TI, Arquivo,
-  Área de Trabalho e Recepção (o resto é Corredor).
+  Banheiro, Área de Trabalho e Recepção (o resto é Corredor). O Banheiro (fase 3) ocupa a metade direita do antigo
+  Arquivo, com porta no corredor do meio; o Arquivo passou a ter a porta pelo lado da Recepção.
 - **Mudar o mapa ou a arte:** edite `scripts/gerar-arte.py` (função `build_grid` para paredes/pisos, bloco
   "posicionamento" para móveis) e rode `python3 packages/office/scripts/gerar-arte.py`. Depois `npm test -w @playground/office`.
   Quando o mapa crescer, dá para trocar o gerador pelo editor **Tiled** sem mexer no jogo (o Phaser lê o JSON do Tiled).
@@ -947,6 +949,29 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
 - **Para testar:** `?fase=3&missao=4` começa direto nesta missão. No componente:
   `<OfficeGame fase={3} startAt={4} alignmentQuiz={...} />`.
 
+### Missão 5: o caça-palavras do banheiro (+100 XP) e o fim do 3º dia
+
+1. Depois do quiz, o ESTAGIÁRIO fica **agoniado**: aparece um balão com uma **gota** tremendo em cima da cabeça (toda
+   aquela água da Copa…).
+2. Um **relógio** (🚽 ⏱, no topo) começa a contar **25 segundos** para chegar a um dos **3 mictórios** do **Banheiro**
+   (corredor do meio, à direita, depois do Arquivo; a plaquinha azul fica ao lado da porta). Andando dá tempo, mas fica
+   apertado; segurando **Shift** sobra mais.
+3. **Não deu tempo:** a calça fica molhada (mancha escura, até o fim do dia), aparece uma pocinha no chão e ele diz que
+   vai terminar no mictório mesmo assim.
+4. No mictório, ele olha as **palavras rabiscadas na parede** (CPU, RAM, BIT, SSD, USB), a câmera chega perto e ele
+   começa a imaginar um caça-palavras.
+5. Abre o **sonho**: a imagem entra **tremendo e embaçada** e mostra o **caça-palavras da biblioteca** numa nuvem.
+6. **Acordar ▶** (achou todas) → ele acorda ainda de frente para o mictório, **+100 XP**. **✕ Desistir** → acorda sem
+   XP e **não tem outra chance** (o dia segue).
+7. Ao sair do banheiro: **fim do expediente**. Escurece, os colegas, a Rita, a recepcionista, o Marcos e o chefe vão
+   embora. O ESTAGIÁRIO sai pela porta principal, **comemora** na calçada e aparece o **resumo do 3º dia**.
+
+- **Qual jogo:** na página do instrutor, **"Sonho no banheiro, 3º dia (Caça-palavras)"** (de preferência um diferente
+  do quadro da reunião do 2º dia). Sem nenhum salvo, usa um de exemplo com as peças do computador:
+  `packages/office/src/game/caca-palavras-banheiro-padrao.json`.
+- **Para testar:** `?fase=3&missao=5` começa direto nesta missão, saindo da Sala de Reuniões. No componente:
+  `<OfficeGame fase={3} startAt={5} bathroomWordSearch={...} />`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -1031,6 +1056,11 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
     chama → entrar na sala → duas falas → o ESTAGIÁRIO senta → notebook com o quiz → **✕ Desistir** → ele levanta e o
     chefe diz que o quiz fica aberto → voltar para a cadeira → senta de novo → responder tudo → **Entregar ao chefe** →
     o chefe comenta os acertos, **+100 XP**, e volta para a Diretoria.
+29. Fase 3, missão 5 (`?fase=3&missao=5`, ou seguindo depois do quiz): balão com a gota e relógio de 25 s → esperar
+    acabar → calça molhada e pocinha → ir até um mictório → falas → a câmera mostra as palavras da parede → sonho
+    tremido com o caça-palavras → **✕ Desistir** → acorda sem XP → sair do banheiro → escurece e todos vão embora →
+    sair pela porta principal → comemora → resumo do 3º dia. Repetir chegando a tempo (sem mancha) e achando todas
+    as palavras → **Acordar ▶** → **+100 XP**.
 
 ## Correções incluídas desde a Fase 1
 

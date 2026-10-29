@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import type { GameResult } from '@playground/games';
 import { createOfficeGame, getOfficeScene } from './game/createGame';
-import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
+import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, URINAL_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
 import { OFFICE_EVENTS, RH_LOOK } from './game/OfficeScene';
 import AlarmPanel from './mission/AlarmPanel';
 import CelularOverlay from './mission/CelularOverlay';
@@ -25,6 +25,7 @@ import { checkHangman, jingleVolume } from './mission/forca';
 import { playMessageTone, playThud, startJingle, type Jingle } from './mission/musiquinha';
 import { BOARD_TOTAL, boardById, BOARDS, checkDelivery, HIDEOUTS, type BoardModel, type Hideout } from './mission/placas';
 import {
+  CACA_PALAVRAS_BANHEIRO_PADRAO,
   CACA_PALAVRAS_PADRAO,
   CRUZADAS_PADRAO,
   CRUZADAS_RITA_PADRAO,
@@ -36,6 +37,8 @@ import {
   MISSAO_CRUZADAS_RITA,
   MISSAO_EXERCICIO,
   FIM_DIA2,
+  FIM_DIA3,
+  MISSAO_BANHEIRO,
   MISSAO_FIM,
   MISSAO_FORCA,
   MISSAO_LEVANTAMENTO,
@@ -54,6 +57,7 @@ import {
   type MissionGame,
 } from './mission/missoes';
 import QuadroOverlay from './mission/QuadroOverlay';
+import SonhoOverlay from './mission/SonhoOverlay';
 import { allPlaced, checkKit, KITS, newKitState, type KitState } from './mission/montagem';
 import MontagemModal from './mission/MontagemModal';
 import PcModal, { formatTime } from './mission/PcModal';
@@ -92,7 +96,9 @@ export interface OfficeGameProps {
   ritaCrossword?: MissionGame | null;
   /** Quiz da reunião de alinhamento, no notebook da Sala de Reuniões, fase 3, missão 4 (padrão: um sobre hardware). */
   alignmentQuiz?: MissionGame | null;
-  /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 a 4 da fase 3 (as anteriores contam como feitas). */
+  /** Caça-palavras sonhado em frente ao mictório, fase 3, missão 5 (padrão: um de exemplo com as peças do computador). */
+  bathroomWordSearch?: MissionGame | null;
+  /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 a 5 da fase 3 (as anteriores contam como feitas). */
   startAt?: 1 | 2 | 3 | 4 | 5 | 6;
   /** Começa no 1º dia (fase 1, padrão) ou direto no 2º ou 3º dia (com o XP dos dias anteriores sem erros). */
   fase?: 1 | 2 | 3;
@@ -130,7 +136,8 @@ type Phase =
   | 'askP2'
   | 'crosswordP2'
   | 'montar'
-  | 'quizP4';
+  | 'quizP4'
+  | 'dreamP5';
 /** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
 type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
@@ -149,6 +156,11 @@ type Fase3M2 = 'off' | 'thirsty' | 'met' | 'waiting' | 'done';
 type Fase3M3 = 'off' | 'called' | 'working' | 'done';
 /** Fase 3, missão 4: chefe chamou, respondendo (sentado), levantou sem terminar, concluída. */
 type Fase3M4 = 'off' | 'called' | 'quiz' | 'waiting' | 'done';
+/**
+ * Fase 3, missão 5: correndo para o banheiro (relógio), não deu tempo (indo mesmo assim), no mictório (sonho),
+ * saindo do banheiro, fim do expediente (indo embora) e concluída (saiu e viu o resumo do dia).
+ */
+type Fase3M5 = 'off' | 'running' | 'wet' | 'urinal' | 'exit' | 'leaving' | 'done';
 /** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
 type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
 /** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
@@ -235,6 +247,7 @@ function OfficeDay({
   surpriseQuiz,
   ritaCrossword,
   alignmentQuiz,
+  bathroomWordSearch,
   missionTime = MISSAO_PCS.tempo,
   startAt = 1,
   fase = 1,
@@ -393,6 +406,15 @@ function OfficeDay({
     p4Ref.current = v;
     setP4State(v);
   };
+  // fase 3, missão 5
+  const [p5, setP5State] = useState<Fase3M5>('off');
+  const p5Ref = useRef<Fase3M5>('off');
+  const setP5 = (v: Fase3M5) => {
+    p5Ref.current = v;
+    setP5State(v);
+  };
+  const deadline5 = useRef(0);
+  const [secondsLeft5, setSecondsLeft5] = useState<number>(MISSAO_BANHEIRO.tempo);
   /** Mochila (uma peça de cada tipo) e os itens da lista que o Marcos já recebeu certos. */
   const [bag, setBagState] = useState<Bag>({});
   const bagRef = useRef<Bag>({});
@@ -451,6 +473,7 @@ function OfficeDay({
     pickup: (_id: string, _at: { x: number; y: number }) => {},
     room: (_r: Room | null) => {},
     endRound: (_r: 'tempo' | 'todas') => {},
+    timeUp5: () => {},
   });
 
   useEffect(() => {
@@ -492,6 +515,17 @@ function OfficeDay({
     }, 250);
     return () => window.clearInterval(id);
   }, [m2]);
+
+  // contagem regressiva da fase 3, missão 5 (até o mictório)
+  useEffect(() => {
+    if (p5 !== 'running') return;
+    const id = window.setInterval(() => {
+      const left = Math.max(0, Math.ceil((deadline5.current - Date.now()) / 1000));
+      setSecondsLeft5(left);
+      if (left <= 0) handlers.current.timeUp5();
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [p5]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1693,9 +1727,9 @@ function OfficeDay({
     s.rhPlace(RH_WAIT, 'down');
     s.setRhTablet(true);
     setToast(MISSAO_PECAS.dayStart);
-    if (startAt >= 2 && startAt <= 4) {
+    if (startAt >= 2 && startAt <= 5) {
       // para testes: as missões anteriores contam como feitas (e entram no resumo do dia)
-      const done = [MISSAO_PECAS, MISSAO_CRUZADAS_RITA, MISSAO_MONTAR_PCS].slice(0, startAt - 1);
+      const done = [MISSAO_PECAS, MISSAO_CRUZADAS_RITA, MISSAO_MONTAR_PCS, MISSAO_ALINHAMENTO].slice(0, startAt - 1);
       xpLog.current = done.map((m) => ({ mission: m.id, title: m.title, xp: m.xp }));
       setXpTo(startXp + done.reduce((sum, m) => sum + m.xp, 0));
       setP1('done');
@@ -1709,7 +1743,14 @@ function OfficeDay({
         return;
       }
       setP3('done');
-      void startF3M4();
+      if (startAt === 4) {
+        void startF3M4();
+        return;
+      }
+      // a missão 5 começa saindo da Sala de Reuniões, onde termina a 4
+      setP4('done');
+      s.leaveMeetingSeat();
+      void startF3M5();
       return;
     }
     await new Promise((r) => window.setTimeout(r, 2500));
@@ -1733,6 +1774,10 @@ function OfficeDay({
     }
     if (id === 'cadeira') {
       if (p4Ref.current === 'waiting') void sitForQuiz();
+      return;
+    }
+    if (id === 'mictorio') {
+      if (p5Ref.current === 'running' || p5Ref.current === 'wet') void atUrinal();
       return;
     }
     if (id.startsWith('pcbox:')) {
@@ -2159,8 +2204,113 @@ function OfficeDay({
         void sc?.ceoBackToSeat();
         backToExplore();
         onMissionComplete?.({ missionId: MISSAO_ALINHAMENTO.id, xp: MISSAO_ALINHAMENTO.xp, success: true, game: result });
+        void startF3M5();
       },
     );
+  };
+
+  // ------------------------------------------------------------ fase 3, missão 5: o aperto no banheiro
+
+  /** Bate a vontade: balão com a gota, e o relógio começa a contar até ele chegar num mictório. */
+  const startF3M5 = async () => {
+    await new Promise((r) => window.setTimeout(r, 2500));
+    await whenFree();
+    const s = scene();
+    if (!alive.current || !s) return;
+    s.setUrge(true);
+    const lines = MISSAO_BANHEIRO.urge.map((t, i, all) => me(t, i === all.length - 1 ? { continueLabel: 'Correr! 🏃' } : {}));
+    say(lines, () => {
+      deadline5.current = Date.now() + MISSAO_BANHEIRO.tempo * 1000;
+      setSecondsLeft5(MISSAO_BANHEIRO.tempo);
+      setP5('running');
+      scene()?.setSpots([{ id: 'mictorio', zone: URINAL_ZONE }]);
+      setToast(MISSAO_BANHEIRO.start);
+      backToExplore();
+    });
+  };
+
+  /** O tempo acabou antes do mictório: faz nas calças, mas continua indo para o banheiro. */
+  const pantsWet = async () => {
+    if (p5Ref.current !== 'running') return;
+    setP5('wet');
+    await whenFree();
+    const s = scene();
+    if (!alive.current || !s) return;
+    s.setUrge(false);
+    s.wetPants();
+    say([me(MISSAO_BANHEIRO.accident, { continueLabel: 'Vou até o banheiro' })], backToExplore);
+  };
+
+  /** Chegou num mictório: alívio, olha as palavras escritas na parede e começa a sonhar com um caça-palavras. */
+  const atUrinal = async () => {
+    const s = scene();
+    if (!s) return;
+    const inTime = p5Ref.current === 'running';
+    setP5('urinal');
+    s.setSpots([]);
+    s.setUrge(false);
+    s.setFrozen(true);
+    setPhase('dialog');
+    await s.useUrinal();
+    if (!alive.current) return;
+    say([me(inTime ? MISSAO_BANHEIRO.relief : MISSAO_BANHEIRO.wetRelief)], async () => {
+      const sc = scene();
+      if (!sc) return;
+      setPhase('dialog');
+      await sc.lookAtWords(true);
+      if (!alive.current) return;
+      say([me(MISSAO_BANHEIRO.words, { continueLabel: '💭 …' })], () => {
+        scene()?.setFrozen(true);
+        setPhase('dreamP5');
+      });
+    });
+  };
+
+  /** Acordou do sonho, ainda de frente para o mictório. Achou todas: 100 XP; desistiu: não tem outra chance. */
+  const finishDream = async (result: GameResult | null) => {
+    const s = scene();
+    if (!s) return;
+    setPhase('dialog');
+    await s.lookAtWords(false);
+    if (!alive.current) return;
+    if (result) addXp(MISSAO_BANHEIRO, MISSAO_BANHEIRO.xp);
+    const last = result
+      ? me(MISSAO_BANHEIRO.success, { badge: `+${MISSAO_BANHEIRO.xp} XP · Missão concluída!`, continueLabel: 'Sair do banheiro' })
+      : me(MISSAO_BANHEIRO.gaveUp, { continueLabel: 'Sair do banheiro' });
+    say([me(MISSAO_BANHEIRO.wake), last], () => {
+      setP5('exit');
+      backToExplore();
+      onMissionComplete?.({ missionId: MISSAO_BANHEIRO.id, xp: result ? MISSAO_BANHEIRO.xp : 0, success: !!result, game: result ?? undefined });
+    });
+  };
+
+  /** Saiu do banheiro: fim do expediente, escurece e todo mundo vai embora. */
+  const startDay3End = () => {
+    const s = scene();
+    if (!s) return;
+    setP5('leaving');
+    s.setNight(1);
+    setToast(FIM_DIA3.endOfDay);
+    void s.everyoneLeaves(WORKSTATIONS.map((w) => w.index));
+    window.setTimeout(() => void scene()?.ceoLeaves(), 1500);
+  };
+
+  /** Saiu pela porta principal: vai para a calçada, comemora e vê o resumo do 3º dia. */
+  const leaveDay3 = async () => {
+    const s = scene();
+    if (!s) return;
+    setP5('done');
+    s.setFrozen(true);
+    setPhase('dialog');
+    await s.playerRunTo({ x: s.playerFeet().x, y: SPAWN.y });
+    if (!alive.current) return;
+    await s.cheer();
+    if (!alive.current) return;
+    say([{ speaker: 'ESTAGIÁRIO', portrait: 'viva-a', text: FIM_DIA3.victory, badge: 'Fase 3 concluída!', continueLabel: 'Ver o resumo do dia' }], () => {
+      scene()?.setFrozen(true);
+      setPhase('summary');
+      onDayComplete?.({ total: xpNow.current, entries: xpLog.current });
+    });
   };
 
   /** Para testes: pula direto para a missão 2 a 6 (as anteriores entram no resumo como feitas, sem bronca). */
@@ -2238,14 +2388,34 @@ function OfficeDay({
       if (r?.id === 'reunioes' && p4Ref.current === 'called' && phaseRef.current === 'explore') meetBoss4();
       if (r?.id === 'entrada' && m6Ref.current === 'armed') void lockUp();
       if (r?.id === 'entrada' && fEndRef.current === 'leaving') void leaveDay2();
+      if (r?.id !== 'banheiro' && p5Ref.current === 'exit') startDay3End();
+      if (r?.id === 'entrada' && p5Ref.current === 'leaving') void leaveDay3();
     },
     endRound: (r) => void endRound(r),
+    timeUp5: () => void pantsWet(),
   };
 
   // ------------------------------------------------------------ tela
 
   let objective: { title: string; text: string; done: boolean };
-  if (fase === 3 && p4 !== 'off') {
+  if (fase === 3 && p5 !== 'off') {
+    const title = `Fase 3 · Missão 5: ${MISSAO_BANHEIRO.title}.`;
+    if (p5 === 'leaving') objective = { title: 'Fim do 3º dia.', text: OBJETIVOS.embora3, done: false };
+    else if (p5 === 'done') objective = { title: 'Fase 3 concluída:', text: 'Terceiro dia de estágio completo!', done: true };
+    else
+      objective = {
+        title,
+        text:
+          p5 === 'running'
+            ? OBJETIVOS.banheiroCorre
+            : p5 === 'wet'
+              ? OBJETIVOS.banheiroMolhado
+              : p5 === 'exit'
+                ? OBJETIVOS.banheiroSair
+                : 'Ache as palavras do caça-palavras do sonho.',
+        done: p5 === 'exit',
+      };
+  } else if (fase === 3 && p4 !== 'off') {
     const title = `Fase 3 · Missão 4: ${MISSAO_ALINHAMENTO.title}.`;
     if (p4 === 'done')
       objective = { title: 'Missão concluída:', text: `${MISSAO_ALINHAMENTO.title} (+${MISSAO_ALINHAMENTO.xp} XP). Explore o escritório à vontade.`, done: true };
@@ -2385,6 +2555,11 @@ function OfficeDay({
         {m2 === 'running' && (
           <span className={secondsLeft <= 30 ? 'office-timer is-low' : 'office-timer'} title="Tempo até a equipe voltar da reunião">
             ⏱ {formatTime(secondsLeft)}
+          </span>
+        )}
+        {p5 === 'running' && (
+          <span className={secondsLeft5 <= 10 ? 'office-timer is-low' : 'office-timer'} title="Tempo para chegar a um mictório">
+            🚽 ⏱ {formatTime(secondsLeft5)}
           </span>
         )}
         {f3 === 'working' && (
@@ -2625,6 +2800,9 @@ function OfficeDay({
             doneLabel="Entregar ao chefe"
             onClose={finishQuizP4}
           />
+        )}
+        {phase === 'dreamP5' && (
+          <SonhoOverlay heading={MISSAO_BANHEIRO.dreamHeading} game={bathroomWordSearch ?? CACA_PALAVRAS_BANHEIRO_PADRAO} onClose={finishDream} />
         )}
         {phase === 'phone' && (
           <CelularOverlay
