@@ -45,6 +45,7 @@ export default function OfficePage() {
   const [bathroomId, setBathroomId] = useState<string>('');
   const [trainingId, setTrainingId] = useState<string>('');
   const [trainingQuizId, setTrainingQuizId] = useState<string>('');
+  const [trainingWordSearchId, setTrainingWordSearchId] = useState<string>('');
 
   useEffect(() => {
     api<{ games: SavedGame[] }>('/games')
@@ -68,6 +69,8 @@ export default function OfficePage() {
         // caça-palavras do banheiro: de preferência um diferente do quadro da reunião
         const wordSearchIds = r.games.filter((g) => g.gameType === 'CACA_PALAVRAS').map((g) => g.id);
         setBathroomId(wordSearchIds[1] ?? wordSearchIds[0] ?? '');
+        // caça-palavras do treinamento de TI: de preferência um terceiro
+        setTrainingWordSearchId(wordSearchIds[2] ?? wordSearchIds[0] ?? '');
         // frases do treinamento de TI: de preferência umas diferentes das do quadro branco
         const phraseIds = r.games.filter((g) => g.gameType === 'COMPLETE_FRASES').map((g) => g.id);
         setTrainingId(phraseIds[1] ?? phraseIds[0] ?? '');
@@ -94,6 +97,7 @@ export default function OfficePage() {
   const bathroom = wordSearches?.find((g) => g.id === bathroomId) ?? null;
   const training = phrases?.find((g) => g.id === trainingId) ?? null;
   const trainingQuiz = quizzes?.find((g) => g.id === trainingQuizId) ?? null;
+  const trainingWordSearch = wordSearches?.find((g) => g.id === trainingWordSearchId) ?? null;
 
   return (
     <section className="panel">
@@ -114,7 +118,8 @@ export default function OfficePage() {
             contra o relógio até o banheiro, com o caça-palavras sonhado em frente ao mictório. No fim, todos vão embora e
             aparece o resumo do 3º dia. No 4º dia (fase 4), o Marcos faltou e o estagiário instala o projetor e a webcam da
             Sala de Reuniões para a vídeo chamada do chefe, liga os cabos da impressora nova, imprime as 10 cópias da
-            reunião e completa as frases e o quiz do treinamento de TI que ficaram em duas folhas na mesa do Marcos.
+            reunião e resolve as três folhas do treinamento de TI na mesa do Marcos (frases, quiz e caça-palavras). No fim,
+            a Rita avisa que o chefe dispensou todo mundo e aparece o resumo do 4º dia.
           </p>
         </div>
         <GamePicker
@@ -194,6 +199,13 @@ export default function OfficePage() {
           onChange={setTrainingQuizId}
           emptyLabel="Jogo de exemplo (sem quiz salvo)"
         />
+        <GamePicker
+          label="Caça-palavras do treinamento de TI, 4º dia (Caça-palavras)"
+          games={wordSearches}
+          value={trainingWordSearchId}
+          onChange={setTrainingWordSearchId}
+          emptyLabel="Jogo de exemplo (sem caça-palavras salvo)"
+        />
       </div>
       {error && (
         <p className="hint" role="alert">
@@ -206,7 +218,7 @@ export default function OfficePage() {
         <Suspense fallback={<p className="hint">Carregando o escritório…</p>}>
           {/* key: trocar um jogo reinicia as missões */}
           <OfficeGame
-            key={`${crosswordId || 'exemplo'}:${phrasesId || 'exemplo'}:${quizId || 'exemplo'}:${wordSearchId || 'exemplo'}:${hangmanId || 'exemplo'}:${surpriseId || 'exemplo'}:${ritaId || 'exemplo'}:${alignmentId || 'exemplo'}:${bathroomId || 'exemplo'}:${trainingId || 'exemplo'}:${trainingQuizId || 'exemplo'}`}
+            key={`${crosswordId || 'exemplo'}:${phrasesId || 'exemplo'}:${quizId || 'exemplo'}:${wordSearchId || 'exemplo'}:${hangmanId || 'exemplo'}:${surpriseId || 'exemplo'}:${ritaId || 'exemplo'}:${alignmentId || 'exemplo'}:${bathroomId || 'exemplo'}:${trainingId || 'exemplo'}:${trainingQuizId || 'exemplo'}:${trainingWordSearchId || 'exemplo'}`}
             crossword={asMissionGame(crossword)}
             phrases={asMissionGame(phrase)}
             quiz={asMissionGame(quiz)}
@@ -218,6 +230,7 @@ export default function OfficePage() {
             bathroomWordSearch={asMissionGame(bathroom)}
             trainingPhrases={asMissionGame(training)}
             trainingQuiz={asMissionGame(trainingQuiz)}
+            trainingWordSearch={asMissionGame(trainingWordSearch)}
           />
         </Suspense>
       )}
