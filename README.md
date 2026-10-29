@@ -530,6 +530,7 @@ React abre a tarefa, e a nota vai para a API como nos outros jogos.
       tests/montar-pc.test.ts    pedidos dos 3 computadores, ordem de encaixe, cabos de energia e SATA, ligar e as caixas na TI
       tests/missao-f3m4.test.ts  quiz de exemplo da reunião de alinhamento, caminho do chefe e a cadeira da mesa de reunião
       tests/missao-f3m5.test.ts  mictórios do banheiro, tempo da corrida saindo da Sala de Reuniões e o caça-palavras de exemplo
+      tests/missao-f4m1.test.ts  caixa na Sala de Reuniões, onde cada coisa fica, cada ponta na entrada certa, ligar e o foco
 
 - **Arte própria.** Tudo é pixel art desenhada pelo `scripts/gerar-arte.py` (tiles de 32 px, 1 pixel de arte = 2 px).
   As imagens de referência (planta do escritório e folhas de personagens) serviram só de inspiração para a disposição
@@ -972,6 +973,40 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
 - **Para testar:** `?fase=3&missao=5` começa direto nesta missão, saindo da Sala de Reuniões. No componente:
   `<OfficeGame fase={3} startAt={5} bathroomWordSearch={...} />`.
 
+## Office · Fase 4 (4º dia): hardware, os equipamentos externos
+
+No resumo do fim do 3º dia, **Começar o 4º dia ▶** abre a fase 4, levando o XP dos três primeiros dias. Para testar
+direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 dias sem nenhuma bronca).
+
+### Missão 1: o projetor e a webcam da vídeo chamada (+100 XP)
+
+1. O 4º dia começa tenso (*"Aula: hardware, os equipamentos externos (periféricos)"*): o **Marcos está doente e
+   faltou** (a cadeira dele fica vazia) e o **chefe** está uma pilha de nervos (com fumacinha). Ele vai até a
+   **Sala de Reuniões** e chama o ESTAGIÁRIO: daqui a pouco tem uma **vídeo chamada com clientes importantes** e o
+   projetor e a webcam não estão instalados.
+2. Lá, o chefe explica e aparece a **caixa** (com o **!**) no canto da sala, embaixo do quadro branco.
+3. Chegando perto da caixa, abre o modal: a **mesa de reunião com o notebook** (tela virada para o ESTAGIÁRIO), a
+   parede com a **tela de projeção** e a **tomada**, e a **caixa** (quadradinhos, estilo mochila) com o **projetor**,
+   o **cabo VGA**, o **cabo de força** e a **webcam**.
+4. Arrastar cada coisa para a mesa: o projetor no **espaço marcado** (virado para a parede), a webcam **presa em cima
+   da tela** do notebook e os cabos em qualquer ponto da mesa.
+5. Ligar **cada ponta** arrastando até a entrada certa (cores na legenda):
+   - **cabo VGA**: uma ponta na entrada VGA do notebook e a outra na do projetor (as duas pontas são iguais);
+   - **cabo de força**: o **conector** na entrada de energia do projetor e o **plugue** na tomada da parede;
+   - **webcam**: o cabo USB na entrada USB do notebook.
+   O notebook e o projetor também têm **entrada HDMI**: o VGA não encaixa nela, e a mensagem explica a diferença.
+6. **⏻ Ligar** (no botão ou no botão do notebook) liga o notebook e o projetor juntos; sem tudo ligado, diz o que
+   falta. O sistema carrega, a mesma imagem aparece **projetada na parede** (com a luz do projetor) e o sistema
+   **instala sozinho o driver da webcam** (aviso com barra de progresso).
+7. A imagem na parede começa **embaçada**: o controle **🔍 Foco do projetor** deixa nítida (o ponto certo muda a
+   cada partida) até aparecer **Foco OK ✓**.
+8. **📷 Câmera** na área de trabalho abre a imagem da webcam (o ESTAGIÁRIO na sala, **● AO VIVO**), no notebook e na
+   parede. Com o foco certo → **Pronto ✓** → o chefe agradece muito, **+100 XP**, e o ESTAGIÁRIO comemora.
+9. **✕ Fechar** antes do fim guarda tudo como está: é só voltar para a caixa para continuar.
+
+- **Arte:** a mesa, o projetor, a webcam, os rolos dos cabos e os desenhos da caixa são camadas desenhadas pelo
+  `scripts/gerar-arte.py` (`src/assets/projetor/`); os lugares, as entradas e as pontas ficam em `cena.json`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -1061,6 +1096,11 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
     tremido com o caça-palavras → **✕ Desistir** → acorda sem XP → sair do banheiro → escurece e todos vão embora →
     sair pela porta principal → comemora → resumo do 3º dia. Repetir chegando a tempo (sem mancha) e achando todas
     as palavras → **Acordar ▶** → **+100 XP**.
+30. Fase 4, missão 1 (`?fase=4`, ou **Começar o 4º dia ▶** no resumo do 3º dia): aviso de que o Marcos faltou → o
+    chefe, com fumacinha, vai até a Sala de Reuniões e chama → três falas → a caixa aparece → chegar perto → soltar o
+    projetor fora do lugar (dica) → tudo na mesa → VGA na entrada HDMI (não encaixa) → ligar as 5 pontas → **⏻ Ligar**
+    → tela de inicialização → imagem na parede, embaçada → instalação do driver → acertar o foco (**Foco OK ✓**) →
+    **📷 Câmera** → **Pronto ✓** → o chefe agradece, **+100 XP**, e o ESTAGIÁRIO comemora.
 
 ## Correções incluídas desde a Fase 1
 

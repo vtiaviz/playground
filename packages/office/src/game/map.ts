@@ -567,3 +567,11 @@ if (!wallWords) throw new Error('Palavras na parede do banheiro faltando no mapa
 export const WALL_WORDS: Point = { x: wallWords.x + wallWords.w / 2, y: wallWords.y + wallWords.h / 2 };
 /** Ponto de saída do banheiro (no corredor do meio, em frente à porta). */
 export const BATHROOM_DOOR: Point = { x: t(43), y: t(20.5) };
+
+// ------------------------------------------------------------ fase 4, missão 1: a caixa do projetor na Sala de Reuniões
+
+/** A caixa do projetor e da webcam, no canto de cima à direita da Sala de Reuniões (embaixo do quadro branco). */
+export const PROJECTOR_BOX: { at: Point; foot: Rect; zone: Rect } = (() => {
+  const at = { x: t(26.9), y: t(3.1) };
+  return { at, foot: { x: at.x + 4, y: at.y + 24, w: 40, h: 14 }, zone: { x: at.x - 4, y: at.y + 38, w: 56, h: 30 } };
+})();

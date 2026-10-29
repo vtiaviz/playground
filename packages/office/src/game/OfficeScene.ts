@@ -140,8 +140,9 @@ export class OfficeScene extends Phaser.Scene {
   private rhAlert: Phaser.GameObjects.Image | null = null;
   private ceoWalker: Phaser.GameObjects.Sprite | null = null;
   private ceoWalkerAlert: Phaser.GameObjects.Image | null = null;
+  private ceoWalkerSmoke: Phaser.Time.TimerEvent | null = null;
   private seated: Phaser.GameObjects.Image | null = null;
-  private pcBoxes: { img: Phaser.GameObjects.Image; alert: Phaser.GameObjects.Image | null }[] = [];
+  private boxes: { at: Point; img: Phaser.GameObjects.Image; alert: Phaser.GameObjects.Image | null }[] = [];
   private night!: Phaser.GameObjects.Rectangle;
   private siren!: Phaser.GameObjects.Rectangle;
   private screenLights = new Map<string, Phaser.GameObjects.Image[]>();
@@ -1606,32 +1607,34 @@ export class OfficeScene extends Phaser.Scene {
     this.facing = 'down';
   }
 
-  // ------------------------------------------------------------ fase 3, missão 3: as 3 caixas dos computadores
+  // ------------------------------------------------------------ caixas com "!" (fase 3, missão 3, e fase 4, missão 1)
 
-  /** As 3 caixas aparecem na Sala de TI (pulando no lugar), com o "!" em cima e a base sólida. */
-  showPcBoxes() {
-    if (this.pcBoxes.length) return;
-    this.pcBoxes = PC_BOXES.map((b, i) => {
+  /**
+   * As caixas aparecem pulando no lugar, com o "!" em cima e a base sólida: as 3 dos computadores na Sala de TI (padrão)
+   * ou a do projetor na Sala de Reuniões.
+   */
+  showBoxes(boxes: { at: Point; foot: Rect }[] = PC_BOXES) {
+    if (this.boxes.length) return;
+    this.boxes = boxes.map((b, i) => {
       const img = this.add.image(b.at.x, b.at.y - 30, 'moveis', 'caixa').setOrigin(0).setAlpha(0).setDepth(b.at.y + 40);
       this.tweens.add({ targets: img, y: b.at.y, alpha: 1, duration: 420, delay: i * 180, ease: 'Bounce.easeOut' });
       const zone = this.add.zone(b.foot.x + b.foot.w / 2, b.foot.y + b.foot.h / 2, b.foot.w, b.foot.h);
       this.physics.add.existing(zone, true);
       this.physics.add.collider(this.player, zone);
-      return { img, alert: null };
+      return { at: b.at, img, alert: null };
     });
-    this.time.delayedCall(900, () => this.pcBoxes.forEach((_, i) => this.setPcBox(i, false)));
+    this.time.delayedCall(900, () => this.boxes.forEach((_, i) => this.setBox(i, false)));
   }
 
-  /** Caixa aberta (computador montado) ou fechada com o "!" (ainda falta montar). */
-  setPcBox(index: number, done: boolean) {
-    const b = this.pcBoxes[index];
+  /** Caixa aberta (tarefa feita) ou fechada com o "!" (ainda falta). */
+  setBox(index: number, done: boolean) {
+    const b = this.boxes[index];
     if (!b) return;
     b.img.setFrame(done ? 'caixa-aberta' : 'caixa');
     b.alert?.destroy();
     b.alert = null;
     if (done) return;
-    const at = PC_BOXES[index].at;
-    const icon = this.add.image(at.x + 24, at.y - 10, 'moveis', 'alerta').setDepth(100000);
+    const icon = this.add.image(b.at.x + 24, b.at.y - 10, 'moveis', 'alerta').setDepth(100000);
     this.tweens.add({ targets: icon, y: icon.y - 5, duration: 450, yoyo: true, repeat: -1 });
     b.alert = icon;
   }
@@ -1714,6 +1717,43 @@ export class OfficeScene extends Phaser.Scene {
     }
     cam.zoomTo(1, 700, 'Sine.easeInOut');
     await this.lookAtPlayer();
+  }
+
+  // ------------------------------------------------------------ fase 4
+
+  /** O Marcos faltou (está doente): a cadeira da Sala de TI fica vazia. */
+  itGuyAbsent() {
+    this.itGuy.setFrame('cadeira-vazia');
+  }
+
+  /** Fumacinha saindo da cabeça do chefe em pé (nervoso). */
+  setCeoWalkerSmoke(on: boolean) {
+    this.ceoWalkerSmoke?.remove();
+    this.ceoWalkerSmoke = null;
+    if (!on) return;
+    this.ceoWalkerSmoke = this.time.addEvent({
+      delay: 420,
+      loop: true,
+      callback: () => {
+        const s = this.ceoWalker;
+        if (!s) return;
+        const headY = s.y - FEET_Y + 6;
+        const puff = this.add
+          .image(s.x + Phaser.Math.Between(-8, 8), headY, 'moveis', 'fumaca')
+          .setDepth(100000)
+          .setScale(0.5)
+          .setAlpha(0.9);
+        this.tweens.add({
+          targets: puff,
+          y: headY - Phaser.Math.Between(30, 46),
+          x: puff.x + Phaser.Math.Between(-12, 12),
+          scale: 1.1,
+          alpha: 0,
+          duration: 1200,
+          onComplete: () => puff.destroy(),
+        });
+      },
+    });
   }
 
   private wait(ms: number) {

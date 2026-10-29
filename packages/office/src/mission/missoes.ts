@@ -80,6 +80,8 @@ export const OBJETIVOS = {
   banheiroMolhado: 'Não deu tempo… Vá até um mictório do Banheiro mesmo assim',
   banheiroSair: 'Saia do Banheiro',
   embora3: 'Fim do expediente! Saia da empresa pela porta principal',
+  reuniao41: 'Vá até a Sala de Reuniões, rápido: o chefe está desesperado!',
+  projetor: 'Chegue perto da caixa na Sala de Reuniões e instale o projetor e a webcam',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -473,3 +475,24 @@ export const FIM_DIA3 = {
 
 /** Usado quando nenhum caça-palavras da biblioteca é escolhido para o banheiro (as peças da aula de hardware). */
 export const CACA_PALAVRAS_BANHEIRO_PADRAO: MissionGame = { title: cacaPalavrasBanheiroPadrao.title, config: cacaPalavrasBanheiroPadrao };
+
+/** Fase 4, missão 1 (aula: hardware, os equipamentos externos): o projetor e a webcam da vídeo chamada. */
+export const MISSAO_PROJETOR = {
+  id: 'projetor-webcam',
+  title: 'O projetor e a webcam da vídeo chamada',
+  xp: 100,
+  dayStart: '☀️ 4º dia de estágio · Aula: hardware, os equipamentos externos (periféricos)',
+  absent: '🤒 O Marcos, da TI, está doente e faltou hoje.',
+  call: 'ESTAGIÁRIO! Corre aqui na Sala de Reuniões, por favor! É URGENTE!',
+  briefing: [
+    'Ainda bem que você chegou! O Marcos está doente e faltou, e daqui a pouco tenho uma reunião por vídeo chamada com clientes muito importantes!',
+    'E o projetor e a webcam não estão instalados! Está tudo naquela caixa, no canto da sala.',
+    'Você consegue? Liga o projetor no notebook e na tomada, coloca a webcam, deixa a imagem nítida na parede e testa a câmera. Rápido, por favor!',
+  ],
+  open: 'A caixa tem o projetor, o cabo VGA, o cabo de força e a webcam. Mãos à obra!',
+  notYet: 'Ainda não está pronto… Quando quiser continuar, é só chegar perto da caixa de novo.',
+  thanks: [
+    'Está funcionando! A imagem na parede, nítida, e a câmera mostrando a sala… Você salvou a minha reunião!',
+    'Muito, MUITO obrigado, estagiário! Vou contar para o Marcos que ele tem um substituto à altura.',
+  ],
+} as const;
