@@ -7,16 +7,26 @@ import { useFullscreen } from './useFullscreen';
 export interface PapelOverlayProps {
   heading: string;
   game: MissionGame;
+  /** Jogo da biblioteca escrito na folha: as frases (missão 3) ou o quiz (missão 4). */
+  gameType?: 'COMPLETE_FRASES' | 'QUIZ';
+  /** Linha pequena em cima do título. */
+  kicker?: string;
   /** Saiu depois de terminar o jogo (`result`) ou antes (`null`, continua depois). */
   onClose: (result: GameResult | null) => void;
 }
 
 /**
- * Modal em forma de folha de papel pautado (com clipe, margem vermelha e anotações do Marcos), com o "Complete as
- * Frases" da biblioteca escrito na folha (fase 4, missão 3: o treinamento de TI).
+ * Modal em forma de folha de papel pautado (com clipe, margem vermelha e mancha de café), com um jogo da biblioteca
+ * escrito na folha: o "Complete as Frases" (fase 4, missão 3) ou o quiz (missão 4) do treinamento de TI.
  */
-export default function PapelOverlay({ heading, game, onClose }: PapelOverlayProps) {
-  const module = getGame('COMPLETE_FRASES');
+export default function PapelOverlay({
+  heading,
+  game,
+  gameType = 'COMPLETE_FRASES',
+  kicker = 'Treinamento de TI · rascunho do Marcos',
+  onClose,
+}: PapelOverlayProps) {
+  const module = getGame(gameType);
   const config = useMemo(() => module.validateConfig(game.config), [module, game.config]);
   const [result, setResult] = useState<GameResult | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -47,7 +57,7 @@ export default function PapelOverlay({ heading, game, onClose }: PapelOverlayPro
         <span className="office-paper-clip" aria-hidden="true" />
         <span className="office-paper-stain" aria-hidden="true" />
         <header className="office-paper-top">
-          <span className="office-paper-kicker">Treinamento de TI · rascunho do Marcos</span>
+          <span className="office-paper-kicker">{kicker}</span>
           <strong className="office-paper-title">{game.title}</strong>
           <span className="office-paper-sub">{heading}</span>
           <span className="office-paper-actions">

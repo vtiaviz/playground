@@ -2,6 +2,7 @@
 import cruzadasPadrao from '../game/cruzadas-padrao.json';
 import frasesPadrao from '../game/frases-padrao.json';
 import frasesTreinamentoPadrao from '../game/frases-treinamento-padrao.json';
+import quizTreinamentoPadrao from '../game/quiz-treinamento-padrao.json';
 import quizPadrao from '../game/quiz-padrao.json';
 import cacaPalavrasPadrao from '../game/caca-palavras-padrao.json';
 import cacaPalavrasBanheiroPadrao from '../game/caca-palavras-banheiro-padrao.json';
@@ -89,6 +90,7 @@ export const OBJETIVOS = {
   pegarCopias: 'Pegue as 10 cópias na impressora',
   levarCopias: 'Leve as 10 cópias ao chefe, na Sala de Reuniões',
   treinamento: 'Vá até a Sala de TI e complete as frases do treinamento no papel em cima da mesa do Marcos',
+  quizTreinamento: 'Responda o quiz da segunda folha, em cima da mesa do Marcos, na Sala de TI',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -546,3 +548,19 @@ export const MISSAO_TREINAMENTO = {
 
 /** Usado quando nenhum "Complete as Frases" da biblioteca é passado para o treinamento de TI (fase 4, missão 3). */
 export const FRASES_TREINAMENTO_PADRAO: MissionGame = { title: frasesTreinamentoPadrao.title, config: frasesTreinamentoPadrao };
+
+/** Fase 4, missão 4: embaixo da folha das frases tinha outra, com o quiz do treinamento. */
+export const MISSAO_QUIZ_TREINAMENTO = {
+  id: 'quiz-treinamento-ti',
+  title: 'O quiz do treinamento de TI',
+  xp: 100,
+  scare: 'Opa! Que susto! Tinha outra folha embaixo dessa… É um quiz do treinamento, e ainda está sem resposta!',
+  kicker: 'Treinamento de TI · quiz do Marcos',
+  heading: 'Responda o quiz do treinamento de TI',
+  appeared: 'Apareceu outra folha na mesa do Marcos, na Sala de TI: um quiz do treinamento!',
+  notYet: 'A folha do quiz continua em cima da mesa do Marcos: é só voltar lá para terminar.',
+  success: 'Ufa! Quiz respondido também. Agora o treinamento de TI está completinho!',
+} as const;
+
+/** Usado quando nenhum quiz da biblioteca é passado para o treinamento de TI (fase 4, missão 4). */
+export const QUIZ_TREINAMENTO_PADRAO: MissionGame = { title: quizTreinamentoPadrao.title, config: quizTreinamentoPadrao };
