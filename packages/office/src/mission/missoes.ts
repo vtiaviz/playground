@@ -3,6 +3,7 @@ import cruzadasPadrao from '../game/cruzadas-padrao.json';
 import frasesPadrao from '../game/frases-padrao.json';
 import quizPadrao from '../game/quiz-padrao.json';
 import cacaPalavrasPadrao from '../game/caca-palavras-padrao.json';
+import cacaPalavrasBanheiroPadrao from '../game/caca-palavras-banheiro-padrao.json';
 import forcaPadrao from '../game/forca-padrao.json';
 import quizSurpresaPadrao from '../game/quiz-surpresa-padrao.json';
 import cruzadasRitaPadrao from '../game/cruzadas-rita-padrao.json';
@@ -75,6 +76,10 @@ export const OBJETIVOS = {
   montarPcs: 'Monte os 3 computadores: chegue perto de cada caixa na Sala de TI',
   reuniao34: 'Vá até a Sala de Reuniões: o chefe está chamando',
   quizAlinhamento: 'Sente na cadeira da mesa de reunião (perto do quadro) e termine o quiz no notebook',
+  banheiroCorre: 'CORRA até um mictório do Banheiro (corredor do meio, à direita, depois do Arquivo). Segure Shift para correr!',
+  banheiroMolhado: 'Não deu tempo… Vá até um mictório do Banheiro mesmo assim',
+  banheiroSair: 'Saia do Banheiro',
+  embora3: 'Fim do expediente! Saia da empresa pela porta principal',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -437,3 +442,34 @@ export const MISSAO_ALINHAMENTO = {
 
 /** Usado quando nenhum quiz da biblioteca é escolhido para a reunião de alinhamento (a aula de hardware do dia). */
 export const QUIZ_ALINHAMENTO_PADRAO: MissionGame = { title: quizAlinhamentoPadrao.title, config: quizAlinhamentoPadrao };
+
+/** Fase 3, missão 5: o aperto no banheiro e o caça-palavras sonhado em frente ao mictório. */
+export const MISSAO_BANHEIRO = {
+  id: 'caca-palavras-banheiro',
+  title: 'O caça-palavras do banheiro',
+  xp: 100,
+  /** Segundos para chegar a um mictório (saindo da Sala de Reuniões dá tempo, mas é apertado). */
+  tempo: 25,
+  urge: [
+    'Ai, ai, ai… Tomei tanta água na Copa que agora estou apertado!',
+    'Preciso chegar num mictório do banheiro, RÁPIDO, antes que seja tarde demais!',
+  ],
+  start: '🚽 Corre! O banheiro fica no corredor do meio, à direita, depois do Arquivo.',
+  accident: 'Ah, não… Não deu tempo! 😳 Bom… pelo menos vou terminar no mictório.',
+  relief: 'Ufa! Cheguei a tempo!',
+  wetRelief: 'Pronto, pelo menos aqui ninguém está vendo…',
+  words: 'Hmm… quanta palavra escrita nessa parede: CPU, RAM, BIT… Isso até parece um caça-palavras…',
+  dreamHeading: 'Sonhando acordado em frente ao mictório',
+  wake: '…Ué? Eu estava sonhando acordado de frente para o mictório? Melhor sair logo daqui!',
+  success: 'E ainda achei todas as palavras, mesmo sonhando! Hoje o dia rendeu!',
+  gaveUp: 'Acordei antes de achar todas as palavras… Ah, deixa para lá. Esse sonho não volta mais.',
+} as const;
+
+/** Fim do 3º dia: escurece, todos vão embora e o ESTAGIÁRIO sai comemorando. */
+export const FIM_DIA3 = {
+  endOfDay: '🌇 Fim do expediente! O pessoal está indo embora…',
+  victory: 'UHUUUL! Terceiro dia de estágio concluído!',
+} as const;
+
+/** Usado quando nenhum caça-palavras da biblioteca é escolhido para o banheiro (as peças da aula de hardware). */
+export const CACA_PALAVRAS_BANHEIRO_PADRAO: MissionGame = { title: cacaPalavrasBanheiroPadrao.title, config: cacaPalavrasBanheiroPadrao };

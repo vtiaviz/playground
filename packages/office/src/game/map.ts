@@ -41,6 +41,7 @@ export type RoomId =
   | 'copa'
   | 'ti'
   | 'arquivo'
+  | 'banheiro'
   | 'trabalho'
   | 'recepcao'
   | 'entrada';
@@ -125,7 +126,8 @@ export const ROOMS: Room[] = [
   { id: 'impressao', name: 'Impressão e Almoxarifado', x: t(1), y: t(11), w: t(11), h: t(9), anchor: { x: t(8), y: t(17) } },
   { id: 'copa', name: 'Copa', x: t(35), y: t(11), w: t(12), h: t(9), anchor: { x: t(37.5), y: t(17.5) } },
   { id: 'ti', name: 'Sala de TI', x: t(1), y: t(21), w: t(11), h: t(8), anchor: { x: t(4), y: t(28) } },
-  { id: 'arquivo', name: 'Arquivo', x: t(35), y: t(21), w: t(12), h: t(8), anchor: { x: t(40), y: t(27) } },
+  { id: 'arquivo', name: 'Arquivo', x: t(35), y: t(21), w: t(6), h: t(8), anchor: { x: t(38), y: t(27) } },
+  { id: 'banheiro', name: 'Banheiro', x: t(41), y: t(21), w: t(6), h: t(8), anchor: { x: t(44), y: t(27) } },
   { id: 'trabalho', name: 'Área de Trabalho', x: t(12), y: t(11), w: t(23), h: t(12), anchor: { x: t(19.5), y: t(17) } },
   { id: 'recepcao', name: 'Recepção', x: t(12), y: t(23), w: t(23), h: t(6), anchor: { x: t(17), y: t(27) } },
   { id: 'entrada', name: 'Entrada da empresa', x: 0, y: t(29.6), w: t(48), h: t(3.4), anchor: { x: t(30), y: t(32) } },
@@ -545,3 +547,23 @@ export const MEETING_SEAT = {
 export const MEETING_SEAT_ZONE: Rect = { x: MEETING_SEAT.approach.x - 26, y: MEETING_SEAT.approach.y - 14, w: 52, h: 20 };
 /** Na ponta direita da mesa de reunião: onde o chefe espera o ESTAGIÁRIO. */
 export const MEETING_BOSS = { x: meetingTable.x + meetingTable.w + 24, y: meetingTable.y + 44 };
+
+// ------------------------------------------------------------ fase 3, missão 5: o aperto no banheiro
+
+const urinals = FURNITURE.filter((f) => f.label.startsWith('Mictório'));
+if (urinals.length !== 3) throw new Error('Os 3 mictórios do banheiro estão faltando no mapa');
+/** Onde o ESTAGIÁRIO fica em pé, de frente para cada mictório (pés). */
+export const URINAL_SPOTS: Point[] = urinals.map((f) => ({ x: f.x + f.w / 2, y: f.foot!.y + f.foot!.h + 12 }));
+/** Chegou aqui = chegou num mictório: a faixa de chão em frente aos três. */
+export const URINAL_ZONE: Rect = {
+  x: urinals[0].x - 6,
+  y: urinals[0].foot!.y + urinals[0].foot!.h,
+  w: urinals[2].x + urinals[2].w + 6 - (urinals[0].x - 6),
+  h: 34,
+};
+const wallWords = FURNITURE.find((f) => f.label === 'Palavras na parede');
+if (!wallWords) throw new Error('Palavras na parede do banheiro faltando no mapa');
+/** Centro das palavras rabiscadas na parede (a câmera chega perto delas antes do sonho). */
+export const WALL_WORDS: Point = { x: wallWords.x + wallWords.w / 2, y: wallWords.y + wallWords.h / 2 };
+/** Ponto de saída do banheiro (no corredor do meio, em frente à porta). */
+export const BATHROOM_DOOR: Point = { x: t(43), y: t(20.5) };

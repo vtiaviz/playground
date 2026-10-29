@@ -1,0 +1,7 @@
+{
+  "title": "As peças do computador",
+  "words": ["PROCESSADOR", "MEMORIA", "PLACAMAE", "GABINETE", "FONTE", "COOLER", "CPU", "RAM", "BIT", "SSD", "USB"],
+  "seed": 2027,
+  "size": 13,
+  "directions": "simple"
+}

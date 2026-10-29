@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import colegasUrl from '../assets/colegas.png';
 import estagiarioUrl from '../assets/estagiario.png';
+import estagiarioMolhadoUrl from '../assets/estagiario-molhado.png';
 import moveisJsonUrl from '../assets/moveis.json?url';
 import moveisUrl from '../assets/moveis.png';
 import tilesUrl from '../assets/tiles.png';
@@ -42,6 +43,8 @@ import {
   WATER_SPOT,
   PC_BOXES,
   MEETING_SEAT,
+  URINAL_SPOTS,
+  WALL_WORDS,
   besidePlayer,
   landingSpots,
   PICKUP_RADIUS,
@@ -171,6 +174,11 @@ export class OfficeScene extends Phaser.Scene {
   private pickupHold = new Set<string>();
   /** Travado, mas com animação própria (procurando no armário): o update não mexe no quadro. */
   private acting = false;
+  /** Fase 3, missão 5: calça molhada (não deu tempo de chegar ao banheiro). */
+  private wet = false;
+  /** Fase 3, missão 5: balão com a gota em cima da cabeça (vontade de ir ao banheiro). */
+  private urge: Phaser.GameObjects.Image | null = null;
+  private puddle: Phaser.GameObjects.Image | null = null;
 
   constructor() {
     super('office');
@@ -180,6 +188,7 @@ export class OfficeScene extends Phaser.Scene {
     this.load.image('tiles', tilesUrl);
     this.load.atlas('moveis', moveisUrl, moveisJsonUrl);
     this.load.spritesheet('estagiario', estagiarioUrl, { frameWidth: FRAME.w, frameHeight: FRAME.h });
+    this.load.spritesheet('estagiario-molhado', estagiarioMolhadoUrl, { frameWidth: FRAME.w, frameHeight: FRAME.h });
     this.load.spritesheet('colegas', colegasUrl, { frameWidth: FRAME.w, frameHeight: FRAME.h });
   }
 
@@ -267,16 +276,21 @@ export class OfficeScene extends Phaser.Scene {
         });
       }
     }
-    for (const facing of Object.keys(ROW) as Facing[]) {
-      this.anims.create({
-        key: `walk-${facing}`,
-        frames: this.anims.generateFrameNumbers('estagiario', {
-          start: ROW[facing] * FRAME.cols,
-          end: ROW[facing] * FRAME.cols + FRAME.cols - 1,
-        }),
-        frameRate: 10,
-        repeat: -1,
-      });
+    for (const [prefix, sheet] of [
+      ['walk', 'estagiario'],
+      ['wet', 'estagiario-molhado'],
+    ] as const) {
+      for (const facing of Object.keys(ROW) as Facing[]) {
+        this.anims.create({
+          key: `${prefix}-${facing}`,
+          frames: this.anims.generateFrameNumbers(sheet, {
+            start: ROW[facing] * FRAME.cols,
+            end: ROW[facing] * FRAME.cols + FRAME.cols - 1,
+          }),
+          frameRate: 10,
+          repeat: -1,
+        });
+      }
     }
 
     // cards das frases caídos no chão (missão 4), escondidos até o esbarrão
@@ -344,6 +358,11 @@ export class OfficeScene extends Phaser.Scene {
 
   update() {
     this.updateDoor();
+    if (this.urge) {
+      // treme um pouquinho: o ESTAGIÁRIO está agoniado
+      const jitter = Math.round(Math.sin(this.time.now / 45) * 1.5);
+      this.urge.setPosition(this.player.x + 16 + jitter, this.player.y - FEET_Y - 10);
+    }
     if (this.frozen) {
       this.player.setVelocity(0, 0);
       if (this.acting) return;
@@ -372,7 +391,7 @@ export class OfficeScene extends Phaser.Scene {
     } else {
       // na diagonal vale a direção vertical, como nos RPGs clássicos
       this.facing = dy < 0 ? 'up' : dy > 0 ? 'down' : dx < 0 ? 'left' : 'right';
-      this.player.anims.play(`walk-${this.facing}`, true);
+      this.player.anims.play(this.walkAnim(this.facing), true);
       this.player.anims.timeScale = k.run.isDown ? 1.5 : 1;
     }
     // profundidade pelos pés: passa atrás dos móveis que estão mais abaixo
@@ -897,6 +916,14 @@ export class OfficeScene extends Phaser.Scene {
       leaving.push(
         (async () => {
           await this.wait(delay);
+          // o Marcos pode já estar em pé (fase 3: comemorou a montagem dos computadores e ficou na Sala de TI)
+          const standing = img === this.itGuy ? this.itWalker : null;
+          if (standing) {
+            this.setItAlert(false);
+            this.itWalker = null;
+            await this.leave(standing, look);
+            return;
+          }
           const s = this.add
             .sprite(img.x + img.width / 2, img.y + img.height - 4, 'colegas', look * 4 * FRAME.cols + 2)
             .setOrigin(0.5, FEET_Y / FRAME.h);
@@ -910,6 +937,15 @@ export class OfficeScene extends Phaser.Scene {
 
   /** O CEO levanta e vai embora (depois de explicar a tarefa). */
   async ceoLeaves() {
+    const walking = this.ceoWalker;
+    if (walking) {
+      // já está em pé (fase 3: ainda voltando da Sala de Reuniões)
+      this.setCeoWalkerAlert(false);
+      this.ceoWalker = null;
+      walking.anims.stop();
+      await this.leave(walking, CEO_LOOK);
+      return;
+    }
     this.setCeoMood('tranquilo');
     this.ceoAlert.setVisible(false);
     this.ceo.setFrame('cadeira-vazia').setY(this.ceoBaseY + 4);
@@ -955,13 +991,16 @@ export class OfficeScene extends Phaser.Scene {
     this.player.setVisible(false);
     this.shadow.setVisible(false);
     const img = this.add
-      .image(p.x, p.y + 2, 'moveis', 'viva-a')
+      .image(p.x, p.y + 2, 'moveis', this.wet ? 'viva-molhado-a' : 'viva-a')
       .setOrigin(0.5, 62 / 68)
       .setDepth(100000);
     const flip = this.time.addEvent({
       delay: 260,
       loop: true,
-      callback: () => img.setFrame(img.frame.name === 'viva-a' ? 'viva-b' : 'viva-a'),
+      callback: () => {
+        const name = String(img.frame.name);
+        img.setFrame(`${name.slice(0, -1)}${name.endsWith('a') ? 'b' : 'a'}`);
+      },
     });
     const cam = this.cameras.main;
     if (!this.overview) cam.zoomTo(1.6, 500, 'Sine.easeOut');
@@ -1197,7 +1236,7 @@ export class OfficeScene extends Phaser.Scene {
       const dist = Math.hypot(dx, dy);
       if (dist < 1) continue;
       this.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
-      p.anims.play(`walk-${this.facing}`, true);
+      p.anims.play(this.walkAnim(this.facing), true);
       p.anims.timeScale = speed === RUN_SPEED ? 1.6 : 1;
       await new Promise<void>((resolve) =>
         this.tweens.add({
@@ -1263,7 +1302,7 @@ export class OfficeScene extends Phaser.Scene {
     const feet = { x: p.x, y: p.y };
     this.acting = true;
     this.facing = 'up';
-    p.anims.play('walk-up', true);
+    p.anims.play(this.walkAnim('up'), true);
     p.anims.timeScale = 1.8;
     const shake = this.tweens.add({ targets: p, x: feet.x + 2, duration: 90, yoyo: true, repeat: -1 });
     const cabinet = this.furnitureImages.get(spot.host);
@@ -1627,6 +1666,54 @@ export class OfficeScene extends Phaser.Scene {
       );
       await this.wait(120);
     }
+  }
+
+  // ------------------------------------------------------------ fase 3, missão 5: o aperto no banheiro
+
+  /** Animação de andar do ESTAGIÁRIO (com a calça molhada, a outra folha). */
+  private walkAnim(facing: Facing) {
+    return `${this.wet ? 'wet' : 'walk'}-${facing}`;
+  }
+
+  /** Balão com uma gota em cima da cabeça, tremendo: a vontade de ir ao banheiro. */
+  setUrge(on: boolean) {
+    this.urge?.destroy();
+    this.urge = null;
+    if (!on) return;
+    this.urge = this.add.image(this.player.x + 16, this.player.y - FEET_Y - 10, 'moveis', 'vontade').setDepth(100000);
+  }
+
+  /** Não deu tempo: a calça fica molhada e aparece uma pocinha embaixo dele. */
+  wetPants() {
+    this.wet = true;
+    const p = this.player;
+    p.setTexture('estagiario-molhado', ROW[this.facing] * FRAME.cols + 2);
+    this.puddle?.destroy();
+    this.puddle = this.add.image(p.x, p.y + 1, 'moveis', 'poca').setDepth(-3).setScale(0.3);
+    this.tweens.add({ targets: this.puddle, scale: 1, duration: 900, ease: 'Sine.easeOut' });
+    if (!this.overview) this.cameras.main.shake(300, 0.004);
+  }
+
+  /** Vai até o mictório livre mais perto e fica de frente para ele (de costas para a câmera). */
+  async useUrinal() {
+    const p = this.player;
+    const spot = URINAL_SPOTS.reduce((a, b) => (Math.hypot(b.x - p.x, b.y - p.y) < Math.hypot(a.x - p.x, a.y - p.y) ? b : a));
+    await this.playerRunTo(spot, SPEED);
+    this.facing = 'up';
+    p.setFrame(ROW.up * FRAME.cols + 2);
+  }
+
+  /** A câmera chega perto das palavras rabiscadas na parede do banheiro (ou volta, com `on` = false). */
+  async lookAtWords(on: boolean) {
+    if (this.overview) return;
+    const cam = this.cameras.main;
+    if (on) {
+      cam.zoomTo(1.8, 900, 'Sine.easeInOut');
+      await this.lookAt(WALL_WORDS.x, WALL_WORDS.y + 20);
+      return;
+    }
+    cam.zoomTo(1, 700, 'Sine.easeInOut');
+    await this.lookAtPlayer();
   }
 
   private wait(ms: number) {

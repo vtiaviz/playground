@@ -2549,3 +2549,169 @@ tr.is-marked .office-clip-row {
 .office-tablet-modal.is-notebook .office-tablet-body {
   clip-path: none;
 }
+
+/* ---------------------------------------------------------------- fase 3, missão 5: o sonho acordado no banheiro */
+.office-dream-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: radial-gradient(ellipse at center, rgba(120, 90, 200, 0.55), rgba(16, 10, 40, 0.88) 70%);
+  animation: office-fade 400ms ease-out;
+}
+.office-dream-wrap {
+  position: relative;
+  display: flex;
+  width: min(1100px, 100%);
+  height: min(820px, calc(100vh - 40px));
+  height: min(820px, calc(100dvh - 40px));
+  animation: office-dream-in 1400ms ease-out both;
+}
+.office-dream {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  border: 3px solid #1c1626;
+  border-radius: 36px;
+  background: #fdfcff;
+  /* nuvem: "bolhas" brancas e embaçadas em volta */
+  box-shadow:
+    0 0 0 8px #ffffff,
+    0 0 0 11px #c9b8f2;
+}
+/* brilho colorido que ondula atrás da nuvem, como uma imagem tremida de sonho (o jogo no meio fica parado) */
+.office-dream-glow {
+  position: absolute;
+  inset: -22px;
+  border-radius: 52px;
+  background: conic-gradient(from 0deg, #c9b8f2, #a8d8f7, #f7c1e4, #fff2a8, #c9b8f2);
+  filter: blur(14px);
+  opacity: 0.8;
+  animation: office-dream-glow 3.2s ease-in-out infinite;
+}
+.office-dream-modal.is-waking .office-dream-wrap {
+  animation: office-dream-out 900ms ease-in forwards;
+}
+.office-dream-modal.is-waking {
+  animation: office-dream-fade-out 900ms ease-in forwards;
+}
+.office-dream-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.7rem 1.6rem 0.5rem;
+  border-bottom: 2px dotted #c9b8f2;
+}
+.office-dream-icon {
+  font-size: 1.4rem;
+}
+.office-dream-title {
+  color: #5a3488;
+  font-size: 1.25rem;
+}
+.office-dream-sub {
+  color: #6b6480;
+  font-style: italic;
+}
+.office-dream-btn {
+  padding: 0.3rem 0.7rem;
+  border: 2px solid #1c1626;
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 700;
+}
+.office-dream-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.6rem 1.2rem 1rem;
+}
+.office-dream-modal.is-fullscreen {
+  padding: 0;
+}
+.office-dream-modal.is-fullscreen .office-dream-wrap {
+  width: 100%;
+  height: 100%;
+}
+.office-dream-modal.is-fullscreen .office-dream {
+  border-radius: 0;
+}
+.office-dream-modal.is-fullscreen .office-dream-glow {
+  display: none;
+}
+@keyframes office-dream-in {
+  0% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: scale(0.9) skewX(6deg);
+  }
+  20% {
+    opacity: 0.6;
+    transform: scale(0.95) skewX(-5deg) rotate(-1deg);
+  }
+  40% {
+    filter: blur(6px);
+    transform: scale(0.98) skewX(4deg) rotate(1deg);
+  }
+  60% {
+    transform: scale(1.01) skewX(-2.5deg);
+  }
+  80% {
+    filter: blur(1.5px);
+    transform: scale(1) skewX(1deg);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}
+@keyframes office-dream-out {
+  0% {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+  30% {
+    transform: scale(1.02) skewX(-4deg) rotate(1deg);
+    filter: blur(3px);
+  }
+  60% {
+    transform: scale(1.06) skewX(5deg) rotate(-1deg);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12) skewX(-3deg);
+    filter: blur(16px);
+  }
+}
+@keyframes office-dream-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes office-dream-glow {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: rotate(4deg) scale(1.02);
+    opacity: 0.95;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .office-dream-wrap,
+  .office-dream-glow,
+  .office-dream-modal.is-waking .office-dream-wrap {
+    animation: none;
+  }
+}
