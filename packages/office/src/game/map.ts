@@ -575,3 +575,36 @@ export const PROJECTOR_BOX: { at: Point; foot: Rect; zone: Rect } = (() => {
   const at = { x: t(26.9), y: t(3.1) };
   return { at, foot: { x: at.x + 4, y: at.y + 24, w: 40, h: 14 }, zone: { x: at.x - 4, y: at.y + 38, w: 56, h: 30 } };
 })();
+
+// ------------------------------------------------------------ fase 4, missão 2: o PC e a impressora da Sala de Impressão
+
+/**
+ * A mesa com o PC da Sala de Impressão, que só aparece no 4º dia (não é um móvel fixo do mapa, e por isso não entra no
+ * levantamento da fase 2). O monitor fica de costas para quem olha: o ESTAGIÁRIO chega por cima, entre a mesa e as
+ * prateleiras.
+ */
+export const PRINT_DESK: { type: string; at: Point; w: number; h: number; foot: Rect; zone: Rect; monitor: Point } = (() => {
+  const type = 'mesa-pc-2';
+  const info = TYPES[type];
+  const at = { x: t(6.6), y: t(16.9) };
+  const [fx, fy, fw, fh] = info.foot!;
+  const foot = { x: at.x + fx, y: at.y + fy, w: fw, h: fh };
+  return {
+    type,
+    at,
+    w: info.w,
+    h: info.h,
+    foot,
+    zone: { x: foot.x + 10, y: foot.y - 34, w: foot.w - 20, h: 30 },
+    monitor: { x: at.x + info.w / 2, y: at.y + 8 },
+  };
+})();
+
+const copier = FURNITURE.find((f) => f.label === 'Copiadora');
+if (!copier?.foot) throw new Error('Copiadora faltando no mapa');
+/** A impressora é a Copiadora da Sala de Impressão: chega por baixo dela; as cópias saem em cima. */
+export const PRINTER: { zone: Rect; copies: Point; top: Point } = {
+  zone: { x: copier.foot.x - 6, y: copier.foot.y + copier.foot.h, w: copier.foot.w + 12, h: 30 },
+  copies: { x: copier.x + 6, y: copier.y + 7 },
+  top: { x: copier.x + copier.w / 2, y: copier.y },
+};

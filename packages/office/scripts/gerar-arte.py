@@ -1495,7 +1495,8 @@ FONT3 = {
     'I': ('###', '.#.', '.#.', '.#.', '###'), 'M': ('#.#', '###', '###', '#.#', '#.#'),
     'P': ('###', '#.#', '###', '#..', '#..'), 'R': ('##.', '#.#', '##.', '#.#', '#.#'),
     'S': ('###', '#..', '###', '..#', '###'), 'T': ('###', '.#.', '.#.', '.#.', '.#.'),
-    'U': ('#.#', '#.#', '#.#', '#.#', '###'),
+    'U': ('#.#', '#.#', '#.#', '#.#', '###'), 'L': ('#..', '#..', '#..', '#..', '###'),
+    'N': ('##.', '#.#', '#.#', '#.#', '#.#'), 'O': ('###', '#.#', '#.#', '#.#', '###'),
 }
 
 
@@ -2862,6 +2863,120 @@ def make_projetor():
         json.dump({'w': PW, 'h': PH, **PROJETOR}, f, indent=1)
 
 
+# ---------------------------------------------------------------- fase 4, missão 2: a impressora da Sala de Impressão
+# A traseira da impressora (a Copiadora da sala), vista de trás, com a entrada de rede (LAN), a USB e a de energia (AC).
+# Na parede, a tomada de rede e a de energia já têm os cabos ligados; as outras pontas estão no chão. 200 x 120 pixels
+# de arte, salvos ampliados 4x; as entradas e as pontas vão para impressora/cena.json.
+
+IW, IH = 200, 120
+IMPRESSORA = {
+    'ports': {'rede': [96, 55], 'usb': [110, 55], 'energia': [103, 76]},
+    'plugs': {'rede': [148, 108], 'energia': [176, 112]},
+    # onde o cabo sai da parede e onde ele encosta no chão (o resto é desenhado pelo modal)
+    'wall': {'rede': [161, 61], 'energia': [183, 64]},
+    'floor': {'rede': [158, 104], 'energia': [190, 108]},
+    'led': [121, 39],
+}
+
+
+def imp_back():
+    """A parede, o chão e a traseira da impressora, desligada (as pontas dos cabos ficam por conta do modal)."""
+    c = Canvas(IW, IH)
+    for y in range(0, 78):  # parede
+        for x in range(IW):
+            c.p(x, y, '#d9c7a6' if noise(x, y, 7) > 0.15 else '#d1be9b')
+    c.rect(0, 78, IW, 4, '#8a5a34')  # rodapé
+    c.hline(0, 78, IW, '#a8714a')
+    for y in range(82, IH):  # carpete
+        for x in range(IW):
+            c.p(x, y, '#5d6b7a' if noise(x // 2, y, 9) > 0.2 else '#55626f')
+    c.rect(28, 100, 100, 4, '#3f4954')  # sombra da impressora no chão
+    # impressora vista de trás: tampa do scanner em cima, corpo e a placa das entradas
+    c.rect(22, 12, 112, 12, '#c3c8cf')
+    c.hline(22, 12, 112, '#e6e9ee')
+    c.rect(26, 10, 104, 3, '#b4bcc8')  # tampa
+    c.rect(98, 14, 22, 8, '#2b2f37')  # visor (apagado), visto por cima da tampa
+    c.rect(20, 24, 116, 76, '#d6dae0')
+    c.hline(20, 24, 116, '#eef0f3')
+    c.vline(20, 24, 76, '#c3c8cf')
+    c.vline(135, 24, 76, '#b4bcc8')
+    c.rect(30, 34, 96, 58, '#c9ced6')  # tampa traseira
+    c.hline(30, 34, 96, '#b4bcc8')
+    for vy in range(40, 86, 4):  # ventilação
+        c.hline(36, vy, 30, '#9aa1ab')
+    c.rect(38, 88, 18, 3, '#f7f4ea')  # etiqueta
+    c.hline(40, 89, 10, '#9aa1ab')
+    c.rect(84, 44, 42, 44, '#8c95a3')  # placa das entradas
+    c.hline(84, 44, 42, '#b4bcc8')
+    c.vline(125, 44, 44, '#5f6775')
+    # LAN: rede (RJ45), com os contatos dourados em cima
+    c.rect(92, 51, 9, 8, '#1d2027')
+    c.rect(93, 52, 7, 2, '#e5c34a')
+    for k in range(4):
+        c.p(93 + k * 2, 52, '#9c7a1a')
+    c.rect(95, 58, 3, 1, '#4a505c')  # entalhe da travinha
+    write3(c, 'LAN', 91, 61, '#2b2f37')
+    # USB: entrada quadradinha com os cantos de cima chanfrados
+    c.rect(107, 51, 7, 7, '#1d2027')
+    c.p(107, 51, '#8c95a3')
+    c.p(113, 51, '#8c95a3')
+    c.rect(109, 53, 3, 3, '#c9ced6')
+    write3(c, 'USB', 105, 61, '#2b2f37')
+    # AC: entrada de energia de 3 pinos
+    c.rect(97, 71, 13, 10, '#1d2027')
+    c.p(97, 80, '#8c95a3')
+    c.p(109, 80, '#8c95a3')
+    for k in range(3):
+        c.rect(99 + k * 4, 74, 1, 4, '#c9ced6')
+    write3(c, 'AC', 99, 82, '#2b2f37')
+    disc(c, IMPRESSORA['led'][0], IMPRESSORA['led'][1], 2, '#4a2620')  # luz de energia, apagada
+    c.rect(26, 100, 6, 3, '#4a505c')  # rodinhas
+    c.rect(124, 100, 6, 3, '#4a505c')
+    # na parede: a tomada de rede (com o cabo azul ligado) e a de energia (com o plugue preto)
+    c.rect(155, 50, 12, 11, '#f4f5f7')
+    c.hline(155, 60, 12, '#c9ced6')
+    c.rect(158, 53, 6, 5, '#2f5f9e')  # capinha do conector
+    c.rect(159, 52, 4, 1, '#5f86c8')
+    c.rect(176, 52, 14, 12, '#f4f5f7')
+    c.hline(176, 63, 14, '#c9ced6')
+    c.rect(179, 55, 8, 7, '#23262d')  # plugue na tomada
+    c.hline(179, 55, 8, '#4a505c')
+    # papéis amassados no chão, de quem tentou imprimir antes
+    c.rect(10, 108, 5, 4, '#f4f1e8')
+    c.p(12, 109, '#c9c3b4')
+    return c
+
+
+def imp_on():
+    """O que muda ao ligar: o visor aceso (PRONTA) e a luz de energia verde."""
+    c = Canvas(IW, IH)
+    c.rect(98, 14, 22, 8, '#163d2a')
+    c.rect(99, 15, 20, 6, '#3fbf7a')
+    write3(c, 'ON', 105, 15, '#0d2b1c')
+    disc(c, IMPRESSORA['led'][0], IMPRESSORA['led'][1], 2, '#4ade80')
+    c.p(IMPRESSORA['led'][0] - 1, IMPRESSORA['led'][1] - 1, '#d9ffe8')
+    return c
+
+
+def make_impressora():
+    out = os.path.join(ASSETS, 'impressora')
+    os.makedirs(out, exist_ok=True)
+    for name, cv in {'traseira': imp_back(), 'ligada': imp_on()}.items():
+        cv.im.resize((cv.w * BIG, cv.h * BIG), Image.NEAREST).save(os.path.join(out, f'{name}.png'), optimize=True)
+    with open(os.path.join(out, 'cena.json'), 'w') as f:
+        json.dump({'w': IW, 'h': IH, **IMPRESSORA}, f, indent=1)
+
+
+def f_copies():
+    """O maço das 10 cópias impressas, em cima da impressora."""
+    c = Canvas(14, 8)
+    for k in range(3):
+        c.rect(1 + k, 4 - k, 11, 3, '#f7f8fa' if k % 2 == 0 else '#e1e4e9')
+    c.hline(3, 3, 7, '#9aa1ab')
+    c.hline(3, 5, 5, '#9aa1ab')
+    return c.outline()
+
+
 def build():
     os.makedirs(ASSETS, exist_ok=True)
     make_tiles()
@@ -2873,6 +2988,7 @@ def build():
     make_pecas()
     make_montar()
     make_projetor()
+    make_impressora()
 
     # tipos de móvel: (canvas, área de colisão em px de arte relativa ao canto do sprite, camada)
     #   camada "wall" = pendurado na parede (sem colisão, fica atrás de tudo)
@@ -2954,6 +3070,7 @@ def build():
     add('placa-banheiro', f_wc_sign(), None, 'wall')
     add('poca', f_puddle(), None, 'fx')
     add('vontade', f_urge(), None, 'fx')
+    add('copias', f_copies(), None, 'fx')
     add('painel-alarme', f_alarm_panel(), (3, 22, 8, 4))
     add('placa-arduino', f_board_floor('arduino'), None, 'fx')
     add('placa-raspberry', f_board_floor('raspberry'), None, 'fx')
