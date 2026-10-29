@@ -1,6 +1,7 @@
 // Textos e regras das missões. A primeira: ajudar o CEO com as palavras-cruzadas.
 import cruzadasPadrao from '../game/cruzadas-padrao.json';
 import frasesPadrao from '../game/frases-padrao.json';
+import frasesTreinamentoPadrao from '../game/frases-treinamento-padrao.json';
 import quizPadrao from '../game/quiz-padrao.json';
 import cacaPalavrasPadrao from '../game/caca-palavras-padrao.json';
 import cacaPalavrasBanheiroPadrao from '../game/caca-palavras-banheiro-padrao.json';
@@ -87,6 +88,7 @@ export const OBJETIVOS = {
   imprimir: 'A impressora ligou! Volte ao PC, abra o documento Reunião e imprima 10 cópias',
   pegarCopias: 'Pegue as 10 cópias na impressora',
   levarCopias: 'Leve as 10 cópias ao chefe, na Sala de Reuniões',
+  treinamento: 'Vá até a Sala de TI e complete as frases do treinamento no papel em cima da mesa do Marcos',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -526,3 +528,21 @@ export const MISSAO_IMPRESSAO = {
     'A reunião está salva! Muito, MUITO obrigado, estagiário! Hoje você foi o Marcos, o técnico e o herói da empresa!',
   ],
 } as const;
+
+/** Fase 4, missão 3: as frases do treinamento de TI que o Marcos deixou no papel, em cima da mesa dele. */
+export const MISSAO_TREINAMENTO = {
+  id: 'treinamento-ti',
+  title: 'As frases do treinamento de TI',
+  xp: 100,
+  call: [
+    'Ah, mais uma coisa! Com o Marcos doente, o treinamento de TI para os funcionários ficou parado.',
+    'Ele estava preparando as frases do treinamento num papel, em cima da mesa dele, na Sala de TI. Você pode ir lá e completar as frases?',
+  ],
+  go: 'O papel com as frases está em cima da mesa do Marcos, na Sala de TI (o "!" mostra onde).',
+  heading: 'Complete as frases do treinamento de TI do Marcos',
+  notYet: 'O papel continua em cima da mesa do Marcos: é só voltar lá para terminar.',
+  success: 'Pronto! As frases do treinamento estão completas. Os funcionários vão aprender tudo sobre os periféricos!',
+} as const;
+
+/** Usado quando nenhum "Complete as Frases" da biblioteca é passado para o treinamento de TI (fase 4, missão 3). */
+export const FRASES_TREINAMENTO_PADRAO: MissionGame = { title: frasesTreinamentoPadrao.title, config: frasesTreinamentoPadrao };

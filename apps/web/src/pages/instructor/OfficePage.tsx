@@ -43,6 +43,7 @@ export default function OfficePage() {
   const [ritaId, setRitaId] = useState<string>('');
   const [alignmentId, setAlignmentId] = useState<string>('');
   const [bathroomId, setBathroomId] = useState<string>('');
+  const [trainingId, setTrainingId] = useState<string>('');
 
   useEffect(() => {
     api<{ games: SavedGame[] }>('/games')
@@ -64,6 +65,9 @@ export default function OfficePage() {
         // caça-palavras do banheiro: de preferência um diferente do quadro da reunião
         const wordSearchIds = r.games.filter((g) => g.gameType === 'CACA_PALAVRAS').map((g) => g.id);
         setBathroomId(wordSearchIds[1] ?? wordSearchIds[0] ?? '');
+        // frases do treinamento de TI: de preferência umas diferentes das do quadro branco
+        const phraseIds = r.games.filter((g) => g.gameType === 'COMPLETE_FRASES').map((g) => g.id);
+        setTrainingId(phraseIds[1] ?? phraseIds[0] ?? '');
       })
       .catch((e) => {
         setLibrary([]);
@@ -85,6 +89,7 @@ export default function OfficePage() {
   const ritaCrossword = crosswords?.find((g) => g.id === ritaId) ?? null;
   const alignment = quizzes?.find((g) => g.id === alignmentId) ?? null;
   const bathroom = wordSearches?.find((g) => g.id === bathroomId) ?? null;
+  const training = phrases?.find((g) => g.id === trainingId) ?? null;
 
   return (
     <section className="panel">
@@ -104,8 +109,8 @@ export default function OfficePage() {
             e escritório) na Sala de TI, o quiz da reunião de alinhamento, no notebook da Sala de Reuniões, e a corrida
             contra o relógio até o banheiro, com o caça-palavras sonhado em frente ao mictório. No fim, todos vão embora e
             aparece o resumo do 3º dia. No 4º dia (fase 4), o Marcos faltou e o estagiário instala o projetor e a webcam da
-            Sala de Reuniões para a vídeo chamada do chefe e depois liga os cabos da impressora nova e imprime as 10 cópias
-            da reunião.
+            Sala de Reuniões para a vídeo chamada do chefe, liga os cabos da impressora nova, imprime as 10 cópias da
+            reunião e completa as frases do treinamento de TI que ficaram no papel da mesa do Marcos.
           </p>
         </div>
         <GamePicker
@@ -171,6 +176,13 @@ export default function OfficePage() {
           onChange={setBathroomId}
           emptyLabel="Jogo de exemplo (sem caça-palavras salvo)"
         />
+        <GamePicker
+          label="Treinamento de TI, 4º dia (Complete as Frases)"
+          games={phrases}
+          value={trainingId}
+          onChange={setTrainingId}
+          emptyLabel="Jogo de exemplo (sem frases salvas)"
+        />
       </div>
       {error && (
         <p className="hint" role="alert">
@@ -183,7 +195,7 @@ export default function OfficePage() {
         <Suspense fallback={<p className="hint">Carregando o escritório…</p>}>
           {/* key: trocar um jogo reinicia as missões */}
           <OfficeGame
-            key={`${crosswordId || 'exemplo'}:${phrasesId || 'exemplo'}:${quizId || 'exemplo'}:${wordSearchId || 'exemplo'}:${hangmanId || 'exemplo'}:${surpriseId || 'exemplo'}:${ritaId || 'exemplo'}:${alignmentId || 'exemplo'}:${bathroomId || 'exemplo'}`}
+            key={`${crosswordId || 'exemplo'}:${phrasesId || 'exemplo'}:${quizId || 'exemplo'}:${wordSearchId || 'exemplo'}:${hangmanId || 'exemplo'}:${surpriseId || 'exemplo'}:${ritaId || 'exemplo'}:${alignmentId || 'exemplo'}:${bathroomId || 'exemplo'}:${trainingId || 'exemplo'}`}
             crossword={asMissionGame(crossword)}
             phrases={asMissionGame(phrase)}
             quiz={asMissionGame(quiz)}
@@ -193,6 +205,7 @@ export default function OfficePage() {
             ritaCrossword={asMissionGame(ritaCrossword)}
             alignmentQuiz={asMissionGame(alignment)}
             bathroomWordSearch={asMissionGame(bathroom)}
+            trainingPhrases={asMissionGame(training)}
           />
         </Suspense>
       )}

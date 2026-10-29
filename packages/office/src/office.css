@@ -2930,3 +2930,117 @@ tr.is-marked .office-clip-row {
   grid-template-areas: 'head' 'bench';
   width: min(920px, 100%);
 }
+
+/* ---------------------------------------------------------------- fase 4, missão 3: a folha das frases do treinamento */
+.office-paper-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px 16px;
+  /* tampo de madeira da mesa do Marcos */
+  background:
+    linear-gradient(rgba(8, 12, 22, 0.55), rgba(8, 12, 22, 0.55)),
+    repeating-linear-gradient(90deg, #8a5a34 0 22px, #93623a 22px 46px, #7f532f 46px 60px);
+  animation: office-fade 200ms ease-out;
+}
+.office-paper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(980px, 100%);
+  height: min(840px, calc(100dvh - 40px));
+  border: 3px solid #1c1626;
+  border-radius: 3px;
+  /* folha pautada com a margem vermelha */
+  background:
+    linear-gradient(90deg, transparent 54px, #e8a2a2 54px 56px, transparent 56px),
+    repeating-linear-gradient(#fbfaf5 0 31px, #cfdcf0 31px 32px);
+  box-shadow: 6px 10px 0 rgba(0, 0, 0, 0.35);
+  transform: rotate(-0.6deg);
+  animation: office-pop 320ms ease-out;
+}
+.office-paper-clip {
+  position: absolute;
+  top: -18px;
+  right: 70px;
+  width: 22px;
+  height: 52px;
+  border: 4px solid #8a929c;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 3px transparent, 1px 1px 0 #5f6775;
+}
+.office-paper-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.8rem;
+  padding: 0.8rem 1.4rem 0.4rem 72px;
+}
+.office-paper-kicker {
+  flex-basis: 100%;
+  color: #7a6a58;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.office-paper-title {
+  color: #1f4fa0;
+  font-size: 1.35rem;
+  /* parece escrito à mão, de caneta azul */
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', var(--font, system-ui), sans-serif;
+}
+.office-paper-sub {
+  color: #c0583a;
+  font-weight: 700;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', var(--font, system-ui), sans-serif;
+}
+.office-paper-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.office-paper-content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.4rem 1.4rem 1rem 72px;
+}
+.office-paper-stain {
+  position: absolute;
+  right: 26px;
+  bottom: 22px;
+  width: 74px;
+  height: 74px;
+  border: 5px solid rgba(140, 90, 50, 0.22);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.office-paper-modal.is-fullscreen {
+  padding: 0;
+}
+.office-paper-modal.is-fullscreen .office-paper {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  transform: none;
+}
+@media (max-width: 640px) {
+  .office-paper-top,
+  .office-paper-content {
+    padding-left: 1rem;
+  }
+  .office-paper {
+    background: repeating-linear-gradient(#fbfaf5 0 31px, #cfdcf0 31px 32px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .office-paper {
+    animation: none;
+  }
+}

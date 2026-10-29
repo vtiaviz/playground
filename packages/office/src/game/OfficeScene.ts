@@ -47,6 +47,7 @@ import {
   WALL_WORDS,
   PRINT_DESK,
   PRINTER,
+  TRAINING_PAPER,
   besidePlayer,
   landingSpots,
   PICKUP_RADIUS,
@@ -186,6 +187,8 @@ export class OfficeScene extends Phaser.Scene {
   private printDesk: Phaser.GameObjects.Image | null = null;
   private copies: Phaser.GameObjects.Image | null = null;
   private marks: Phaser.GameObjects.Image[] = [];
+  /** Fase 4, missão 3: a folha das frases do treinamento em cima da mesa do Marcos. */
+  private trainingPaper: Phaser.GameObjects.Image | null = null;
 
   constructor() {
     super('office');
@@ -1790,6 +1793,15 @@ export class OfficeScene extends Phaser.Scene {
     const at = PRINTER.copies;
     this.copies = this.add.image(at.x, at.y, 'moveis', 'copias').setOrigin(0).setDepth(PRINTER.zone.y + 1);
     this.tweens.add({ targets: this.copies, y: at.y - 2, duration: 300, yoyo: true, repeat: 2 });
+  }
+
+  /** A folha das frases do treinamento em cima da mesa do Marcos (fase 4, missão 3). */
+  setTrainingPaper(on: boolean) {
+    this.trainingPaper?.destroy();
+    this.trainingPaper = null;
+    if (!on) return;
+    const at = TRAINING_PAPER;
+    this.trainingPaper = this.add.image(at.x, at.y, 'moveis', 'papel-frases').setOrigin(0).setDepth(at.y + 40);
   }
 
   /** O chefe (em pé) vem até o lado do ESTAGIÁRIO, e os dois ficam de frente. */
