@@ -1,0 +1,233 @@
+/* Design system compartilhado com o caça-palavras e a forca:
+   fundo em degradê azul, texto branco, cartões translúcidos, botões em pílula amarela e
+   o tabuleiro num cartão branco arredondado. A estrutura segue o resolvedor do Crossword Labs
+   (grade numerada, palavra ativa destacada, dicas em duas colunas). */
+
+.cw-root {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  background: linear-gradient(#4a7fb5, #5b9bd5);
+  color: #fff;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.cw-root > * {
+  width: 100%;
+  max-width: 760px;
+}
+
+.cw-compact {
+  min-height: 0;
+  border-radius: 12px;
+  padding: 16px 12px 20px;
+}
+
+.cw-root h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+/* ---------- tabuleiro (cartão branco, como no caça-palavras) ---------- */
+.cw-wrap {
+  /* width: 100% é essencial: um elemento com container-type: inline-size não tem largura
+     intrínseca e, dentro de um cartão com align-items: center (tela de resultado), colapsava
+     para ~0 px. */
+  width: 100%;
+  container-type: inline-size;
+  display: flex;
+  justify-content: safe center;
+  overflow-x: auto;
+  padding: 4px 6px 16px; /* espaço para a sombra do cartão não ser cortada */
+}
+
+.cw-grid {
+  --pad: 12px;
+  --cell: max(26px, min(40px, calc((100cqw - 2 * var(--pad)) / var(--cols))));
+  position: relative;
+  flex: none;
+  padding: var(--pad);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  color: #333;
+}
+
+.cw-cells {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell));
+  grid-auto-rows: var(--cell);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.cw-cell {
+  position: relative;
+  box-sizing: border-box;
+  background: #fff;
+  border-right: 1px solid #333;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+}
+.cw-cell.edge-top { border-top: 1px solid #333; }
+.cw-cell.edge-left { border-left: 1px solid #333; }
+
+.cw-cell.is-word { background: #d6e6f7; }      /* palavra ativa: azul claro */
+.cw-cell.is-current { background: #ffe08a; }   /* célula atual: o amarelo dos botões */
+.cw-cell.is-wrong { background: #ffd6d6; }
+.cw-cell.is-wrong .cw-letter { color: #c62828; }
+
+.cw-num {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-size: calc(var(--cell) * 0.27);
+  line-height: 1;
+}
+
+.cw-letter {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: calc(var(--cell) * 0.58);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* campo oculto que recebe o teclado: fica sobre a célula atual para o navegador
+   não "pular" a página ao focar (16px evita o zoom automático do iOS) */
+.cw-input {
+  position: absolute;
+  top: calc(var(--pad) + var(--r) * var(--cell));
+  left: calc(var(--pad) + var(--c) * var(--cell));
+  width: var(--cell);
+  height: var(--cell);
+  padding: 0;
+  border: 0;
+  outline: none;
+  opacity: 0;
+  font-size: 16px;
+  caret-color: transparent;
+  pointer-events: none;
+}
+
+/* ---------- dicas ---------- */
+.cw-clues {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 32px;
+  font-size: 0.95rem;
+}
+
+.cw-clues h2 {
+  margin: 0 0 6px;
+  text-align: center;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+.cw-clues ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cw-clues button {
+  display: block;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cw-clues button:hover { background: rgba(255, 255, 255, 0.12); }
+.cw-clues button.is-active { background: rgba(255, 255, 255, 0.26); }
+.cw-clues button:focus-visible { outline: 2px solid #ffe08a; outline-offset: -2px; }
+
+@media (max-width: 520px) {
+  .cw-clues { grid-template-columns: 1fr; }
+}
+
+/* ---------- topo e dica atual ---------- */
+.cw-hud {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* dica atual sempre visível acima da grade (no celular as dicas ficam longe) */
+.cw-current {
+  margin: 0;
+  min-height: 2.4em;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+/* ---------- cartões, botões e resultado ---------- */
+.cw-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 560px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  text-align: center;
+}
+
+.cw-card p { margin: 0; }
+.cw-rules { margin: 0; padding-left: 1.2rem; text-align: left; }
+
+.cw-btn {
+  padding: 12px 26px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffe08a;
+  color: #3b2f00;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cw-btn:hover { background: #ffd95e; }
+.cw-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.cw-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.cw-note { font-size: 0.9rem; }
+
+.cw-stars {
+  font-size: 2.6rem;
+  line-height: 1;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.35);
+}
+.cw-stars .on { color: #ffd43b; }
+
+.cw-message { font-weight: 600; }
+.cw-total { font-size: 1.1rem; }
+.cw-total strong { font-size: 2rem; }
+.cw-ref { font-size: 0.85rem; opacity: 0.85; }

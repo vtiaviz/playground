@@ -1,0 +1,18 @@
+{
+  "name": "playground",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @playground/api",
+    "dev:web": "npm run dev -w @playground/web",
+    "db:up": "docker compose up -d",
+    "db:seed": "npm run db:seed -w @playground/api",
+    "test": "npm run test -w @playground/api && npm run test -w @playground/games && npm run test -w @playground/office",
+    "typecheck": "npm run typecheck -w @playground/games && npm run typecheck -w @playground/office && npm run typecheck -w @playground/api && npm run typecheck -w @playground/web",
+    "build": "npm run build -w @playground/web",
+    "dev:office": "npm run dev -w @playground/office"
+  }
+}

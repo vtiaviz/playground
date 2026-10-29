@@ -1,0 +1,2025 @@
+import { useEffect, useRef, useState } from 'react';
+import type Phaser from 'phaser';
+import type { GameResult } from '@playground/games';
+import { createOfficeGame, getOfficeScene } from './game/createGame';
+import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
+import { OFFICE_EVENTS, RH_LOOK } from './game/OfficeScene';
+import AlarmPanel from './mission/AlarmPanel';
+import CelularOverlay from './mission/CelularOverlay';
+import DaySummary, { type DaySummaryData, type XpEntry } from './mission/DaySummary';
+import { checkExercise, type ExerciseCheck } from './mission/exercicio';
+import { describeOn, newPowerStates, OFFICE_PCS, stillOn, type PowerState } from './mission/desligar';
+import { playSiren } from './mission/sirene';
+import DesktopModal from './mission/sistemas/DesktopModal';
+import { ChoiceBalloon, DialogBox } from './mission/Dialogs';
+import { checkSurvey, clearWrong, explainProblems, SURVEY_DEVICES, taggedCount, type DeviceTag, type Survey } from './mission/levantamento';
+import LevantamentoModal from './mission/LevantamentoModal';
+import MinigameOverlay from './mission/MinigameOverlay';
+import PlacaDestaque from './mission/PlacaDestaque';
+import RelogioPassando from './mission/RelogioPassando';
+import { checkHangman, jingleVolume } from './mission/forca';
+import { playMessageTone, playThud, startJingle, type Jingle } from './mission/musiquinha';
+import { BOARD_TOTAL, boardById, BOARDS, checkDelivery, HIDEOUTS, type BoardModel, type Hideout } from './mission/placas';
+import {
+  CACA_PALAVRAS_PADRAO,
+  CRUZADAS_PADRAO,
+  FORCA_PADRAO,
+  FRASES_PADRAO,
+  MISSAO_CACA,
+  MISSAO_CEO,
+  MISSAO_EXERCICIO,
+  FIM_DIA2,
+  MISSAO_FIM,
+  MISSAO_FORCA,
+  MISSAO_LEVANTAMENTO,
+  MISSAO_MONTAGEM,
+  MISSAO_PCS,
+  MISSAO_PLACAS,
+  MISSAO_PROVA,
+  MISSAO_QUADRO,
+  OBJETIVOS,
+  QUIZ_PADRAO,
+  QUIZ_SURPRESA_PADRAO,
+  type MissionCrossword,
+  type MissionGame,
+} from './mission/missoes';
+import QuadroOverlay from './mission/QuadroOverlay';
+import { allPlaced, checkKit, KITS, newKitState, type KitState } from './mission/montagem';
+import MontagemModal from './mission/MontagemModal';
+import PcModal, { formatTime } from './mission/PcModal';
+import TabletOverlay from './mission/TabletOverlay';
+import { diagnose, isPcReady, newPcState, PC_MODELS, type PcState } from './mission/pcs';
+import './office.css';
+
+export interface MissionResult {
+  missionId: string;
+  /** XP ganho (ou perdido, se negativo). */
+  xp: number;
+  /** `false` = a missão deu errado (ex.: bronca do chefe na missão 2). */
+  success: boolean;
+  /** Resultado do minijogo, quando a missão tem um (missão 1: palavras-cruzadas). */
+  game?: GameResult;
+}
+
+export interface OfficeGameProps {
+  /** Chamado quando o ESTAGIÁRIO entra numa sala (`null` = corredor). */
+  onRoomChange?: (room: Room | null) => void;
+  /** Palavras-cruzadas que o CEO está tentando resolver (padrão: um jogo de exemplo sobre o computador). */
+  crossword?: MissionCrossword | null;
+  /** Tempo da missão 2 em segundos (padrão: 3 minutos). */
+  missionTime?: number;
+  /** "Complete as Frases" do quadro branco da missão 4 (padrão: um jogo de exemplo sobre informática básica). */
+  phrases?: MissionGame | null;
+  /** Quiz da "prova de informática" da Elisa na missão 5 (padrão: um quiz de exemplo sobre informática básica). */
+  quiz?: MissionGame | null;
+  /** Caça-palavras do quadro da Sala de Reuniões, fase 2, missão 2 (padrão: um de exemplo com os tipos de computador). */
+  wordSearch?: MissionGame | null;
+  /** Forca do tablet do Marcos, fase 2, missão 4 (padrão: uma de exemplo com as palavras do dia). */
+  hangman?: MissionGame | null;
+  /** Quiz do exercício surpresa do curso, que chega pelo celular, fase 2, missão 5 (padrão: um de exemplo sobre o dia). */
+  surpriseQuiz?: MissionGame | null;
+  /** Para testes: começa direto na missão 2 a 6 da fase 1, ou na 2 a 5 da fase 2 (6 = fim do 2º dia; as anteriores contam como feitas). */
+  startAt?: 1 | 2 | 3 | 4 | 5 | 6;
+  /** Começa no 1º dia (fase 1, padrão) ou direto no 2º dia (fase 2, com o XP de uma fase 1 sem erros). */
+  fase?: 1 | 2;
+  /** Chamado quando uma missão termina (para guardar o XP). */
+  onMissionComplete?: (result: MissionResult) => void;
+  /** Chamado no fim da fase 1 (fim do primeiro dia), com o resumo do XP. */
+  onDayComplete?: (summary: DaySummaryData) => void;
+}
+
+type Phase =
+  | 'explore'
+  | 'greeting'
+  | 'ask'
+  | 'declined'
+  | 'playing'
+  | 'dialog'
+  | 'pc'
+  | 'kit'
+  | 'ask4'
+  | 'board'
+  | 'ask5'
+  | 'tablet'
+  | 'os'
+  | 'alarm'
+  | 'summary'
+  | 'survey'
+  | 'askF2'
+  | 'askF2b'
+  | 'board2'
+  | 'search'
+  | 'placa'
+  | 'hangman'
+  | 'phone';
+/** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
+type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
+/** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
+type Fase2M2 = 'off' | 'chat' | 'called' | 'accepted' | 'done';
+/** Fase 2, missão 3: Marcos chamou, procurando as placas, entregue. */
+type Fase2M3 = 'off' | 'called' | 'working' | 'done';
+/** Fase 2, missão 4: Marcos descansando (relógio), tablet caído, forca aberta, saindo de fininho, concluída. */
+type Fase2M4 = 'off' | 'resting' | 'crashed' | 'playing' | 'escaping' | 'done';
+/** Fase 2, missão 5: o celular vibrando, aberto (exercício ainda não entregue), concluída. */
+type Fase2M5 = 'off' | 'ringing' | 'pending' | 'done';
+/** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
+type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
+/** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
+type Mission6 = 'off' | 'leaving' | 'called' | 'working' | 'armed' | 'checking' | 'done';
+/** Missão 5: Elisa conversando com a Rita na Copa, chamou o ESTAGIÁRIO, concluída. */
+type Mission5 = 'off' | 'gossip' | 'called' | 'done';
+/** Missão 4: Bruno indo ao quadro, chamou o ESTAGIÁRIO, concluída. */
+type Mission4 = 'off' | 'walking' | 'called' | 'done';
+/** Missão 3: chamado no RH, montando, Rita conferindo, corrigindo, concluída. */
+type Mission3 = 'off' | 'called' | 'working' | 'checking' | 'fixing' | 'done';
+/** Missão 2: antes, contando o tempo, equipe voltando, chefe chamou o ESTAGIÁRIO, concluída. */
+type Mission2 = 'off' | 'running' | 'returning' | 'called' | 'done';
+
+interface Line {
+  speaker: string;
+  portrait: string;
+  text: string;
+  badge?: string;
+  continueLabel?: string;
+}
+
+const ceo = (text: string, portrait = 'ceo-feliz-b', extra: Partial<Line> = {}): Line => ({
+  speaker: MISSAO_CEO.speaker,
+  portrait,
+  text,
+  ...extra,
+});
+
+/** "3 minutos", "1 minuto e 30 segundos", "45 segundos". */
+function tempoPorExtenso(s: number) {
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  const min = m === 1 ? '1 minuto' : `${m} minutos`;
+  const seg = r === 1 ? '1 segundo' : `${r} segundos`;
+  if (!m) return seg;
+  return r ? `${min} e ${seg}` : min;
+}
+
+/** Missão 6: onde fica cada computador que ficou ligado (luz da tela e área que abre o sistema). */
+const PC_SPOTS = OFFICE_PCS.map((pc) => ({ pc, ...deskSpot(pc.desk) }));
+
+/** Fase 2: onde fica cada equipamento do levantamento (ponto do adesivo e área que abre o modal). */
+const DEVICE_SPOTS = new Map(SURVEY_DEVICES.map((d) => [d.id, deviceSpot(d.host, d.gadget, d.nth)]));
+
+/** Fase 2, missão 3: os móveis com lupa (topo, para a lupa, e área na frente, que começa a busca). */
+const HIDE_SPOTS = new Map(HIDEOUTS.map((h) => [h.id, searchSpot(h.host, h.nth)]));
+
+/** XP de quem terminou a fase 1 sem nenhuma bronca (para começar direto na fase 2). */
+const FASE1_XP = [MISSAO_CEO, MISSAO_PCS, MISSAO_MONTAGEM, MISSAO_QUADRO, MISSAO_PROVA, MISSAO_FIM].reduce((a, m) => a + m.xp, 0);
+
+const DPAD: { label: string; x: number; y: number; area: string }[] = [
+  { label: '▲', x: 0, y: -1, area: 'up' },
+  { label: '◀', x: -1, y: 0, area: 'left' },
+  { label: '▶', x: 1, y: 0, area: 'right' },
+  { label: '▼', x: 0, y: 1, area: 'down' },
+];
+
+/**
+ * Jogo Office: escritório top-down com o ESTAGIÁRIO e as missões. "Jogar o dia de novo" recomeça o dia do zero (o 2º
+ * dia volta com o XP do primeiro); "Começar o 2º dia" abre a fase 2 levando o XP do primeiro dia.
+ */
+export default function OfficeGame(props: OfficeGameProps) {
+  const [day, setDay] = useState<{ run: number; fase: 1 | 2; xp?: number }>({ run: 0, fase: props.fase ?? 1 });
+  return (
+    <OfficeDay
+      key={day.run}
+      {...props}
+      fase={day.fase}
+      startXp={day.xp}
+      onRestart={() => setDay((d) => (d.fase === 2 ? { run: d.run + 1, fase: 2, xp: d.xp } : { run: d.run + 1, fase: 1 }))}
+      onNextDay={(xp) => setDay((d) => ({ run: d.run + 1, fase: 2, xp }))}
+    />
+  );
+}
+
+function OfficeDay({
+  onRoomChange,
+  crossword,
+  phrases,
+  quiz,
+  wordSearch,
+  hangman,
+  surpriseQuiz,
+  missionTime = MISSAO_PCS.tempo,
+  startAt = 1,
+  fase = 1,
+  startXp = FASE1_XP,
+  onMissionComplete,
+  onDayComplete,
+  onRestart,
+  onNextDay,
+}: OfficeGameProps & { startXp?: number; onRestart: () => void; onNextDay: (xp: number) => void }) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<Phaser.Game | null>(null);
+  const alive = useRef(true);
+  const roomCb = useRef(onRoomChange);
+  roomCb.current = onRoomChange;
+
+  const [room, setRoom] = useState<Room | null>(null);
+  const [overview, setOverview] = useState(false);
+  const [debug, setDebug] = useState(false);
+  const [phase, setPhase] = useState<Phase>('explore');
+  const [balloonAt, setBalloonAt] = useState({ x: 0, y: 0 });
+  const [xp, setXp] = useState(0);
+  const [missionDone, setMissionDone] = useState(false);
+  const [enteredBuilding, setEnteredBuilding] = useState(false);
+  const [dialog, setDialog] = useState<{ lines: Line[]; i: number; done: () => void } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // missão 2
+  const [m2, setM2State] = useState<Mission2>('off');
+  const m2Ref = useRef<Mission2>('off');
+  const setM2 = (v: Mission2) => {
+    m2Ref.current = v;
+    setM2State(v);
+  };
+  const pcStates = useRef<PcState[]>(PC_MODELS.map(newPcState));
+  const [openPc, setOpenPc] = useState<number | null>(null);
+  const [signCount, setSignCount] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(missionTime);
+  const deadline = useRef(0);
+  /** Resultado da última rodada (`true` = computador ligado certo) e quem foi reclamar. */
+  const lastOk = useRef<boolean[]>([]);
+  const complainer = useRef(0);
+
+  // missão 3
+  const [m3, setM3State] = useState<Mission3>('off');
+  const m3Ref = useRef<Mission3>('off');
+  const setM3 = (v: Mission3) => {
+    m3Ref.current = v;
+    setM3State(v);
+  };
+  const kitStates = useRef<KitState[]>(KITS.map(newKitState));
+  const [openKit, setOpenKit] = useState<number | null>(null);
+  const [kitsDone, setKitsDone] = useState(0);
+  /** A Rita chega no RH (para o diálogo esperar por ela). */
+  const ritaArrived = useRef<Promise<void>>(Promise.resolve());
+  const started = useRef(false);
+
+  // missão 4
+  const [m4, setM4State] = useState<Mission4>('off');
+  const m4Ref = useRef<Mission4>('off');
+  const setM4 = (v: Mission4) => {
+    m4Ref.current = v;
+    setM4State(v);
+  };
+  // missão 5
+  const [m5, setM5State] = useState<Mission5>('off');
+  const m5Ref = useRef<Mission5>('off');
+  const setM5 = (v: Mission5) => {
+    m5Ref.current = v;
+    setM5State(v);
+  };
+  // missão 6
+  const [m6, setM6State] = useState<Mission6>('off');
+  const m6Ref = useRef<Mission6>('off');
+  const setM6 = (v: Mission6) => {
+    m6Ref.current = v;
+    setM6State(v);
+  };
+  const power = useRef<Record<string, PowerState>>(newPowerStates());
+  const [openOs, setOpenOs] = useState<string | null>(null);
+  const [pcsOn, setPcsOn] = useState(OFFICE_PCS.length);
+
+  // fase 2, missão 1
+  const [f2, setF2State] = useState<Fase2M1>('off');
+  const f2Ref = useRef<Fase2M1>('off');
+  const setF2 = (v: Fase2M1) => {
+    f2Ref.current = v;
+    setF2State(v);
+  };
+  const [f2b, setF2bState] = useState<Fase2M2>('off');
+  const f2bRef = useRef<Fase2M2>('off');
+  const setF2b = (v: Fase2M2) => {
+    f2bRef.current = v;
+    setF2bState(v);
+  };
+  // fase 2, missão 3
+  const [f3, setF3State] = useState<Fase2M3>('off');
+  const f3Ref = useRef<Fase2M3>('off');
+  const setF3 = (v: Fase2M3) => {
+    f3Ref.current = v;
+    setF3State(v);
+  };
+  /** Móveis onde o ESTAGIÁRIO já procurou. */
+  const searched = useRef(new Set<string>());
+  const collectedRef = useRef(0);
+  const [collected, setCollected] = useState(0);
+  /** Placa que acabou de pegar (em destaque) e quantas terá com ela. */
+  const [picked, setPicked] = useState<{ model: BoardModel; count: number } | null>(null);
+  // fase 2, missão 4
+  const [f4, setF4State] = useState<Fase2M4>('off');
+  const f4Ref = useRef<Fase2M4>('off');
+  const setF4 = (v: Fase2M4) => {
+    f4Ref.current = v;
+    setF4State(v);
+  };
+  const [clockShow, setClockShow] = useState(false);
+  const jingle = useRef<Jingle | null>(null);
+  // fase 2, missão 5
+  const [f5, setF5State] = useState<Fase2M5>('off');
+  const f5Ref = useRef<Fase2M5>('off');
+  const setF5 = (v: Fase2M5) => {
+    f5Ref.current = v;
+    setF5State(v);
+  };
+  // fim do 2º dia
+  const [fEnd, setFEndState] = useState<Fase2Fim>('off');
+  const fEndRef = useRef<Fase2Fim>('off');
+  const setFEnd = (v: Fase2Fim) => {
+    fEndRef.current = v;
+    setFEndState(v);
+  };
+  /** Respostas do exercício já enviadas pelo celular (e o resultado do último quiz). */
+  const [attempts, setAttempts] = useState<ExerciseCheck[]>([]);
+  const attemptsRef = useRef<ExerciseCheck[]>([]);
+  const lastExercise = useRef<GameResult | null>(null);
+  const phoneSeen = useRef(false);
+  const survey = useRef<Survey>({});
+  const [tagged, setTagged] = useState(0);
+  const [openDevice, setOpenDevice] = useState<string | null>(null);
+
+  /** Tudo o que mudou o XP no dia (para o resumo do fim da fase). */
+  const xpLog = useRef<XpEntry[]>([]);
+  const xpNow = useRef(0);
+  const setXpTo = (v: number) => {
+    xpNow.current = v;
+    setXp(v);
+  };
+  const addXp = (m: { id: string; title: string }, delta: number, note?: string) => {
+    xpLog.current.push({ mission: m.id, title: m.title, xp: delta, note });
+    setXpTo(Math.max(0, xpNow.current + delta));
+  };
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  const roomRef = useRef<Room | null>(null);
+
+  const scene = () => (gameRef.current ? getOfficeScene(gameRef.current) : null);
+  const refocus = () => hostRef.current?.focus();
+
+  // Os eventos do Phaser chamam a versão mais nova destas funções.
+  const handlers = useRef({
+    talk: () => {},
+    pc: (_i: number) => {},
+    box: (_i: number) => {},
+    spot: (_id: string) => {},
+    pickup: (_id: string) => {},
+    room: (_r: Room | null) => {},
+    endRound: (_r: 'tempo' | 'todas') => {},
+  });
+
+  useEffect(() => {
+    alive.current = true;
+    const host = hostRef.current!;
+    const game = createOfficeGame(host);
+    gameRef.current = game;
+    // em desenvolvimento, deixa o jogo acessível no console (e nos testes de navegador)
+    if (import.meta.env.DEV) (window as unknown as { __officeGame?: Phaser.Game }).__officeGame = game;
+    game.events.on(OFFICE_EVENTS.room, (r: Room | null) => {
+      setRoom(r);
+      roomRef.current = r;
+      if (r?.id !== 'entrada') setEnteredBuilding(true);
+      roomCb.current?.(r);
+      handlers.current.room(r);
+    });
+    game.events.on(OFFICE_EVENTS.overview, setOverview);
+    game.events.on(OFFICE_EVENTS.debug, setDebug);
+    game.events.on(OFFICE_EVENTS.talk, () => handlers.current.talk());
+    game.events.on(OFFICE_EVENTS.pc, (i: number) => handlers.current.pc(i));
+    game.events.on(OFFICE_EVENTS.box, (i: number) => handlers.current.box(i));
+    game.events.on(OFFICE_EVENTS.spot, (id: string) => handlers.current.spot(id));
+    game.events.on(OFFICE_EVENTS.pickup, (id: string) => handlers.current.pickup(id));
+    host.focus();
+    return () => {
+      alive.current = false;
+      gameRef.current = null;
+      game.destroy(true);
+    };
+  }, []);
+
+  // contagem regressiva da missão 2
+  useEffect(() => {
+    if (m2 !== 'running') return;
+    const id = window.setInterval(() => {
+      const left = Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000));
+      setSecondsLeft(left);
+      if (left <= 0) handlers.current.endRound('tempo');
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [m2]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 4500);
+    return () => window.clearTimeout(id);
+  }, [toast]);
+
+  /** Calcula onde fica a cabeça do personagem dentro do palco, para o balão. */
+  const placeBalloon = () => {
+    const s = scene();
+    const canvas = hostRef.current?.querySelector('canvas');
+    const stage = stageRef.current;
+    if (!s || !canvas || !stage) return;
+    const pos = s.playerScreenPosition();
+    const c = canvas.getBoundingClientRect();
+    const st = stage.getBoundingClientRect();
+    setBalloonAt({ x: c.left - st.left + pos.x * c.width, y: c.top - st.top + pos.y * c.height });
+  };
+
+  const backToExplore = () => {
+    setPhase('explore');
+    scene()?.setFrozen(false);
+    refocus();
+  };
+
+  /** Mostra uma sequência de falas; `done` roda depois da última. */
+  const say = (lines: Line[], done: () => void) => {
+    scene()?.setFrozen(true);
+    setDialog({ lines, i: 0, done });
+    setPhase('dialog');
+  };
+
+  const nextLine = () => {
+    if (!dialog) return;
+    if (dialog.i + 1 < dialog.lines.length) {
+      setDialog({ ...dialog, i: dialog.i + 1 });
+      return;
+    }
+    setDialog(null);
+    setPhase('explore');
+    dialog.done();
+  };
+
+  // ------------------------------------------------------------ missão 1
+
+  const finishGame = (result: GameResult | null) => {
+    if (!result) {
+      // desistiu: o CEO continua frustrado e puxa conversa de novo quando você voltar
+      backToExplore();
+      return;
+    }
+    addXp(MISSAO_CEO, MISSAO_CEO.xp);
+    setMissionDone(true);
+    const s = scene();
+    s?.setCeoTalk(false);
+    s?.setCeoMood('feliz');
+    say([ceo(MISSAO_CEO.celebration, 'ceo-feliz-a', { badge: `+${MISSAO_CEO.xp} XP · Missão concluída!`, continueLabel: 'Valeu, chefe!' })], () => {
+      scene()?.setCeoMood('tranquilo');
+      onMissionComplete?.({ missionId: MISSAO_CEO.id, xp: MISSAO_CEO.xp, success: true, game: result });
+      briefing();
+    });
+  };
+
+  // ------------------------------------------------------------ missão 2
+
+  const briefing = () => {
+    const texts = MISSAO_PCS.briefing(tempoPorExtenso(missionTime));
+    say(
+      texts.map((t, i) => ceo(t, 'ceo-feliz-b', i === texts.length - 1 ? { continueLabel: 'Começar!' } : {})),
+      startRound,
+    );
+  };
+
+  /** A equipe vai para a reunião e o tempo começa a contar. */
+  const startRound = () => {
+    const s = scene();
+    if (!s) return;
+    pcStates.current = PC_MODELS.map(newPcState);
+    setSignCount(0);
+    s.resetMission2();
+    s.setCeoMood('tranquilo');
+    s.setCeoTalk(false);
+    deadline.current = Date.now() + missionTime * 1000;
+    setSecondsLeft(missionTime);
+    setM2('running');
+    s.setPcZones(true);
+    backToExplore();
+    setToast('A equipe foi para a Sala de Reuniões. Corra para a Área de Trabalho!');
+    void s.startMeeting();
+  };
+
+  const openStation = (i: number) => {
+    if (m2Ref.current !== 'running') return;
+    scene()?.setFrozen(true);
+    setOpenPc(i);
+    setPhase('pc');
+  };
+
+  const updatePc = (i: number, st: PcState) => {
+    pcStates.current[i] = st;
+    scene()?.setPcState(i, { glow: st.monitorOn, sign: st.sign });
+  };
+
+  const closePc = (i: number, signed: boolean) => {
+    if (m2Ref.current !== 'running') return; // o tempo acabou com o modal aberto
+    setOpenPc(null);
+    backToExplore();
+    if (!signed) return;
+    updatePc(i, { ...pcStates.current[i], sign: true });
+    const count = pcStates.current.filter((p) => p.sign).length;
+    setSignCount(count);
+    if (count === PC_MODELS.length) window.setTimeout(() => handlers.current.endRound('todas'), 1200);
+  };
+
+  /** Fim do tempo (ou todas as placas colocadas): a equipe volta e senta. */
+  const endRound = async (reason: 'tempo' | 'todas') => {
+    if (m2Ref.current !== 'running') return;
+    const s = scene();
+    if (!s) return;
+    setM2('returning');
+    s.setPcZones(false);
+    if (openPc !== null || phase === 'pc') {
+      setOpenPc(null);
+      backToExplore();
+    }
+    setToast(
+      reason === 'tempo'
+        ? '⏰ Acabou o tempo! A equipe está voltando da reunião.'
+        : '✅ Todas as mesas com placa! A equipe está voltando da reunião.',
+    );
+    const ok = pcStates.current.map(isPcReady);
+    lastOk.current = ok;
+    await s.returnToDesks(ok);
+    if (!alive.current) return;
+
+    if (ok.every(Boolean)) {
+      s.setCeoMood('feliz');
+      addXp(MISSAO_PCS, MISSAO_PCS.xp);
+      say([ceo(MISSAO_PCS.success, 'ceo-feliz-a', { badge: `+${MISSAO_PCS.xp} XP · Missão concluída!`, continueLabel: 'Valeu, chefe!' })], () => {
+        scene()?.setCeoMood('tranquilo');
+        setM2('done');
+        onMissionComplete?.({ missionId: MISSAO_PCS.id, xp: MISSAO_PCS.xp, success: true });
+        callToRh();
+      });
+      return;
+    }
+
+    // um colega sem computador vai reclamar com o chefe
+    const first = ok.indexOf(false);
+    complainer.current = first;
+    s.setCeoMood('frustrado');
+    await s.complain(first);
+    if (!alive.current) return;
+    say(
+      [
+        { speaker: PC_MODELS[first].owner, portrait: `colega:${WORKSTATIONS[first].look}`, text: MISSAO_PCS.complaint },
+        ceo(MISSAO_PCS.call, 'ceo-bravo-a'),
+      ],
+      () => {
+        setM2('called');
+        scene()?.setCeoTalk(true);
+        backToExplore();
+      },
+    );
+  };
+
+  /** O ESTAGIÁRIO chegou na Diretoria depois de ser chamado: bronca, −XP e nova chance. */
+  const scolding = () => {
+    const s = scene();
+    if (!s) return;
+    s.setCeoTalk(false);
+    const wrong = lastOk.current.flatMap((ok, i) => (ok ? [] : [i]));
+    const first = complainer.current;
+    const back = s.backToDesk(first, true);
+    addXp(MISSAO_PCS, -MISSAO_PCS.penalty, 'Bronca do chefe: computador mal ligado');
+    const lessons = wrong.map((i) =>
+      ceo(
+        `Estação ${i + 1}, mesa de ${PC_MODELS[i].owner}: ${diagnose(PC_MODELS[i], pcStates.current[i])}. Preste atenção: ${PC_MODELS[i].lesson}`,
+        'ceo-bravo-b',
+      ),
+    );
+    say([ceo(MISSAO_PCS.scolding(PC_MODELS[first].owner, wrong.length), 'ceo-bravo-a', { badge: `−${MISSAO_PCS.penalty} XP` }), ...lessons], async () => {
+      scene()?.setFrozen(true);
+      await back;
+      if (!alive.current) return;
+      onMissionComplete?.({ missionId: MISSAO_PCS.id, xp: -MISSAO_PCS.penalty, success: false });
+      say([ceo(MISSAO_PCS.retry, 'ceo-bravo-a', { continueLabel: 'Tentar de novo' })], startRound);
+    });
+  };
+
+  // ------------------------------------------------------------ missão 3
+
+  const rita = (text: string, extra: Partial<Line> = {}): Line => ({
+    speaker: MISSAO_MONTAGEM.rh,
+    portrait: `colega:${RH_LOOK}`,
+    text,
+    ...extra,
+  });
+
+  /** O CEO avisa que o RH chamou; a Rita sai da Copa e vai esperar no RH. */
+  const callToRh = () => {
+    say([ceo(MISSAO_MONTAGEM.call, 'ceo-feliz-b', { continueLabel: 'Estou indo!' })], () => {
+      const s = scene();
+      if (!s) return;
+      setM3('called');
+      ritaArrived.current = s.rhWalkTo(RH_WAIT, 'down');
+      backToExplore();
+    });
+  };
+
+  /** Entrou no RH depois de chamado: a Rita explica a tarefa e vai tomar café. */
+  const meetRita = async () => {
+    const s = scene();
+    if (!s) return;
+    setM3('working');
+    s.setFrozen(true);
+    await ritaArrived.current;
+    if (!alive.current) return;
+    const lines = MISSAO_MONTAGEM.briefing.map((t, i, all) => rita(t, i === all.length - 1 ? { continueLabel: 'Combinado!' } : {}));
+    say(lines, () => {
+      const sc = scene();
+      if (!sc) return;
+      sc.setBoxZones(true);
+      void sc.rhWalkTo(RH_HOME, 'up');
+      backToExplore();
+    });
+  };
+
+  const openBox = (i: number) => {
+    if (m3Ref.current !== 'working' && m3Ref.current !== 'fixing') return;
+    scene()?.setFrozen(true);
+    setOpenKit(i);
+    setPhase('kit');
+  };
+
+  const updateKit = (i: number, st: KitState) => {
+    kitStates.current[i] = st;
+    scene()?.setRhStation(i, { built: allPlaced(st), boxOpen: st.placed.length > 0 });
+    setKitsDone(kitStates.current.filter((k) => k.done).length);
+  };
+
+  const closeKit = (i: number, done: boolean) => {
+    setOpenKit(null);
+    backToExplore();
+    if (done) updateKit(i, { ...kitStates.current[i], done: true });
+    if (kitStates.current.every((k) => k.done)) void checkAssembly();
+  };
+
+  /** A Rita volta (ou, se já está no RH, só confere): passa em cada mesa e dá o resultado. */
+  const checkAssembly = async () => {
+    const s = scene();
+    if (!s) return;
+    setM3('checking');
+    s.setBoxZones(false);
+    setToast(MISSAO_MONTAGEM.checking);
+    for (const st of RH_STATIONS) {
+      await s.rhWalkTo(st.spot, 'up');
+      await new Promise((r) => window.setTimeout(r, 900));
+      if (!alive.current) return;
+    }
+    await s.rhWalkTo(RH_WAIT, 'down');
+    if (!alive.current) return;
+    const errors = KITS.map((k, i) => checkKit(k, kitStates.current[i]));
+    if (errors.every((e) => e.length === 0)) {
+      addXp(MISSAO_MONTAGEM, MISSAO_MONTAGEM.xp);
+      say([rita(MISSAO_MONTAGEM.success, { badge: `+${MISSAO_MONTAGEM.xp} XP · Missão concluída!`, continueLabel: 'Obrigado, Rita!' })], () => {
+        setM3('done');
+        void scene()?.rhWalkTo(RH_HOME, 'up');
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_MONTAGEM.id, xp: MISSAO_MONTAGEM.xp, success: true });
+        void startMission4();
+      });
+      return;
+    }
+    addXp(MISSAO_MONTAGEM, -MISSAO_MONTAGEM.penalty, 'A Rita achou erro na montagem');
+    const details = errors.flatMap((e, i) => (e.length ? [rita(`No computador do ${KITS[i].room}: ${e.join(' ')}`)] : []));
+    say([rita(MISSAO_MONTAGEM.problems, { badge: `−${MISSAO_MONTAGEM.penalty} XP` }), ...details, rita(MISSAO_MONTAGEM.fixIt, { continueLabel: 'Vou corrigir' })], () => {
+      errors.forEach((e, i) => {
+        if (e.length) updateKit(i, { ...kitStates.current[i], done: false });
+      });
+      setM3('fixing');
+      scene()?.setBoxZones(true);
+      backToExplore();
+      onMissionComplete?.({ missionId: MISSAO_MONTAGEM.id, xp: -MISSAO_MONTAGEM.penalty, success: false });
+    });
+  };
+
+  // ------------------------------------------------------------ missão 4
+
+  const bruno = (text: string, extra: Partial<Line> = {}): Line => ({
+    speaker: PC_MODELS[MISSAO_QUADRO.colleague].owner,
+    portrait: `colega:${WORKSTATIONS[MISSAO_QUADRO.colleague].look}`,
+    text,
+    ...extra,
+  });
+
+  /** Espera o ESTAGIÁRIO ficar livre (sem diálogo nem modal aberto). */
+  const whenFree = () =>
+    new Promise<void>((resolve) => {
+      const check = () => (phaseRef.current === 'explore' || !alive.current ? resolve() : window.setTimeout(check, 300));
+      check();
+    });
+
+  /** O Bruno vai até o quadro branco, esbarra, os cards caem e ele chama o ESTAGIÁRIO. */
+  const startMission4 = async () => {
+    const s = scene();
+    if (!s) return;
+    setM4('walking');
+    await s.bumpBoard(MISSAO_QUADRO.colleague);
+    if (!alive.current) return;
+    setToast(MISSAO_QUADRO.crash);
+    await whenFree();
+    if (!alive.current) return;
+    say([bruno(MISSAO_QUADRO.call, { continueLabel: 'Estou indo!' })], () => {
+      setM4('called');
+      backToExplore();
+      // se o ESTAGIÁRIO já está na sala, a conversa começa na hora
+      if (roomRef.current?.id === 'reunioes') meetBruno();
+    });
+  };
+
+  const meetBruno = () => {
+    say([bruno(MISSAO_QUADRO.greeting), bruno(MISSAO_QUADRO.plea)], () => {
+      scene()?.setFrozen(true);
+      placeBalloon();
+      setPhase('ask4');
+    });
+  };
+
+  const finishBoard = (result: GameResult | null) => {
+    if (!result) {
+      // desistiu: o Bruno continua esperando no quadro
+      backToExplore();
+      return;
+    }
+    const s = scene();
+    s?.restoreBoard();
+    s?.setWalkerAlert(MISSAO_QUADRO.colleague, false);
+    addXp(MISSAO_QUADRO, MISSAO_QUADRO.xp);
+    say([bruno(MISSAO_QUADRO.success, { badge: `+${MISSAO_QUADRO.xp} XP · Missão concluída!`, continueLabel: 'De nada!' })], () => {
+      setM4('done');
+      void scene()?.backToDesk(MISSAO_QUADRO.colleague, false);
+      backToExplore();
+      onMissionComplete?.({ missionId: MISSAO_QUADRO.id, xp: MISSAO_QUADRO.xp, success: true, game: result });
+      void startMission5();
+    });
+  };
+
+  // ------------------------------------------------------------ missão 5
+
+  const elisa = (text: string, extra: Partial<Line> = {}): Line => ({
+    speaker: PC_MODELS[MISSAO_PROVA.colleague].owner,
+    portrait: `colega:${WORKSTATIONS[MISSAO_PROVA.colleague].look}`,
+    text,
+    ...extra,
+  });
+
+  /**
+   * A Elisa vai até a Copa e conversa com a Rita (a câmera mostra a cena). Fica sabendo do ESTAGIÁRIO,
+   * vai para o cantinho com o tablet e chama ele discretamente.
+   */
+  const startMission5 = async () => {
+    const s = scene();
+    if (!s) return;
+    setM5('gossip');
+    await new Promise((r) => window.setTimeout(r, 1500));
+    if (!alive.current) return;
+    await s.chatAtCopa(MISSAO_PROVA.colleague);
+    if (!alive.current) return;
+    await whenFree();
+    if (!alive.current) return;
+    const copa = ROOMS.find((r) => r.id === 'copa')!;
+    s.setFrozen(true);
+    setPhase('dialog');
+    await s.lookAt(copa.x + copa.w / 2, copa.y + copa.h / 2);
+    if (!alive.current) return;
+    const lines = MISSAO_PROVA.gossip.map((g) => (g.who === 'rita' ? rita(g.text) : elisa(g.text)));
+    say(lines, async () => {
+      const sc = scene();
+      if (!sc) return;
+      sc.setFrozen(true);
+      setPhase('dialog');
+      await sc.goToCorner(MISSAO_PROVA.colleague);
+      if (!alive.current) return;
+      await sc.lookAtPlayer();
+      if (!alive.current) return;
+      say([elisa(MISSAO_PROVA.call, { continueLabel: 'Estou indo!' })], () => {
+        setM5('called');
+        backToExplore();
+        if (roomRef.current?.id === 'copa') meetElisa();
+      });
+    });
+  };
+
+  /** Chegou na Copa: a Elisa mostra o tablet e pede ajuda. */
+  const meetElisa = () => {
+    say([elisa(MISSAO_PROVA.greeting), elisa(MISSAO_PROVA.plea)], askElisa);
+  };
+
+  const askElisa = () => {
+    scene()?.setFrozen(true);
+    placeBalloon();
+    setPhase('ask5');
+  };
+
+  const finishTablet = (result: GameResult | null) => {
+    if (!result) {
+      // desistiu: a Elisa continua esperando no canto da Copa
+      backToExplore();
+      return;
+    }
+    const right = Number(result.details.correct);
+    const total = Number(result.details.total);
+    if (right < total) {
+      say([elisa(MISSAO_PROVA.retry(right, total))], askElisa);
+      return;
+    }
+    say([elisa(MISSAO_PROVA.hug, { continueLabel: 'Vem!' })], async () => {
+      const s = scene();
+      if (!s) return;
+      s.setFrozen(true);
+      setPhase('dialog');
+      await s.hug(MISSAO_PROVA.colleague);
+      if (!alive.current) return;
+      addXp(MISSAO_PROVA, MISSAO_PROVA.xp);
+      say([elisa(MISSAO_PROVA.success, { badge: `+${MISSAO_PROVA.xp} XP · Missão concluída!`, continueLabel: 'De nada!' })], () => {
+        setM5('done');
+        void scene()?.backToDesk(MISSAO_PROVA.colleague, false);
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_PROVA.id, xp: MISSAO_PROVA.xp, success: true, game: result });
+        void startMission6();
+      });
+    });
+  };
+
+  // ------------------------------------------------------------ missão 6
+
+  const spotsFor6 = () => [...PC_SPOTS.map((sp) => ({ id: sp.pc.id, zone: sp.zone })), { id: 'alarme', zone: ALARM_ZONE }];
+  const lightOf = (st: PowerState) => (st === 'off' ? 'off' : st === 'sleep' ? 'sleep' : 'on');
+
+  /** Fim do expediente: escurece, todos vão embora e o chefe chama o ESTAGIÁRIO. */
+  const startMission6 = async () => {
+    const s = scene();
+    if (!s) return;
+    setM6('leaving');
+    await new Promise((r) => window.setTimeout(r, 1500));
+    if (!alive.current) return;
+    power.current = newPowerStates();
+    setPcsOn(OFFICE_PCS.length);
+    s.clearMission2();
+    s.setNight(1);
+    PC_SPOTS.forEach((sp) => s.setScreenLight(sp.pc.id, sp.monitor, 'on'));
+    setToast(MISSAO_FIM.endOfDay);
+    void s.everyoneLeaves(WORKSTATIONS.map((w) => w.index));
+    await new Promise((r) => window.setTimeout(r, 3500));
+    await whenFree();
+    if (!alive.current) return;
+    say([ceo(MISSAO_FIM.call, 'ceo-feliz-b', { continueLabel: 'Estou indo!' })], () => {
+      setM6('called');
+      scene()?.setCeoTalk(true);
+      backToExplore();
+    });
+  };
+
+  /** Na Diretoria: o CEO explica a última tarefa, passa a senha do alarme e vai embora. */
+  const ceoBriefing6 = () => {
+    const s = scene();
+    if (!s) return;
+    s.setCeoTalk(false);
+    const lines = MISSAO_FIM.briefing.map((t, i, all) => ceo(t, 'ceo-feliz-b', i === all.length - 1 ? { continueLabel: 'Até amanhã, chefe!' } : {}));
+    say(lines, () => {
+      const sc = scene();
+      if (!sc) return;
+      setM6('working');
+      sc.setSpots(spotsFor6());
+      void sc.ceoLeaves();
+      backToExplore();
+    });
+  };
+
+  const onSpot = (id: string) => {
+    if (m6Ref.current !== 'working' || phaseRef.current !== 'explore') return;
+    if (id === 'alarme') {
+      scene()?.setFrozen(true);
+      setPhase('alarm');
+      return;
+    }
+    if (power.current[id] === 'off') {
+      setToast(MISSAO_FIM.alreadyOff);
+      return;
+    }
+    scene()?.setFrozen(true);
+    setOpenOs(id);
+    setPhase('os');
+  };
+
+  const updatePower = (id: string, st: PowerState) => {
+    power.current = { ...power.current, [id]: st };
+    const sp = PC_SPOTS.find((x) => x.pc.id === id)!;
+    scene()?.setScreenLight(id, sp.monitor, lightOf(st));
+    setPcsOn(stillOn(power.current).length);
+  };
+
+  const closeOs = () => {
+    setOpenOs(null);
+    backToExplore();
+  };
+
+  const armAlarm = () => {
+    setM6('armed');
+    scene()?.setSpots([]);
+    setToast(MISSAO_FIM.armed);
+    backToExplore();
+  };
+
+  /** Saiu com o alarme ativado: tranca a porta e confere se ficou computador ligado. */
+  const lockUp = async () => {
+    const s = scene();
+    if (!s) return;
+    setM6('checking');
+    s.lockDoor(true);
+    s.setNight(2);
+    setToast(MISSAO_FIM.locked);
+    await new Promise((r) => window.setTimeout(r, 2200));
+    if (!alive.current) return;
+    const on = stillOn(power.current);
+    if (on.length) {
+      setToast(MISSAO_FIM.siren);
+      s.setSiren(true);
+      playSiren(2600);
+      await new Promise((r) => window.setTimeout(r, 2600));
+      if (!alive.current) return;
+      s.setSiren(false);
+      addXp(MISSAO_FIM, -MISSAO_FIM.penalty, `O alarme disparou: ${on.length === 1 ? '1 computador ligado' : `${on.length} computadores ligados`}`);
+      const details = on.map((pc) => ceo(describeOn(pc, power.current[pc.id]), 'ceo-bravo-b'));
+      say(
+        [ceo(MISSAO_FIM.phone(on.length), 'ceo-bravo-a', { badge: `−${MISSAO_FIM.penalty} XP` }), ...details, ceo(MISSAO_FIM.retry, 'ceo-bravo-a', { continueLabel: 'Vou resolver!' })],
+        () => {
+          const sc = scene();
+          if (!sc) return;
+          sc.lockDoor(false);
+          sc.setNight(1);
+          setM6('working');
+          sc.setSpots(spotsFor6());
+          backToExplore();
+          onMissionComplete?.({ missionId: MISSAO_FIM.id, xp: -MISSAO_FIM.penalty, success: false });
+        },
+      );
+      return;
+    }
+    s.setFrozen(true);
+    setPhase('dialog');
+    await s.cheer();
+    if (!alive.current) return;
+    addXp(MISSAO_FIM, MISSAO_FIM.xp);
+    say([{ speaker: 'ESTAGIÁRIO', portrait: 'viva-a', text: MISSAO_FIM.victory, badge: `+${MISSAO_FIM.xp} XP · Fase 1 concluída!`, continueLabel: 'Ver o resumo do dia' }], () => {
+      setM6('done');
+      scene()?.setFrozen(true);
+      setPhase('summary');
+      onMissionComplete?.({ missionId: MISSAO_FIM.id, xp: MISSAO_FIM.xp, success: true });
+      onDayComplete?.({ total: xpNow.current, entries: xpLog.current });
+    });
+  };
+
+  // ------------------------------------------------------------ fase 2, missão 1: levantamento dos computadores
+
+  const marcos = (text: string, extra: Partial<Line> = {}): Line => ({
+    speaker: MISSAO_LEVANTAMENTO.it,
+    portrait: 'colega:0',
+    text,
+    ...extra,
+  });
+
+  const spotsForF2 = () => [
+    ...SURVEY_DEVICES.map((d) => ({ id: d.id, zone: DEVICE_SPOTS.get(d.id)!.zone })),
+    { id: 'marcos', zone: IT_ZONE },
+  ];
+
+  /** Começo do 2º dia: os computadores montados ontem estão nas mesas e o chefe chama o ESTAGIÁRIO. */
+  const startDay2 = async () => {
+    const s = scene();
+    if (!s) return;
+    setXpTo(startXp);
+    setMissionDone(true);
+    setM2('done');
+    setM3('done');
+    setM4('done');
+    setM5('done');
+    setM6('done');
+    s.setCeoTalk(false);
+    s.setCeoMood('tranquilo');
+    RH_STATIONS.forEach((st) => s.setRhStation(st.index, { built: true, boxOpen: true }));
+    setToast(MISSAO_LEVANTAMENTO.dayStart);
+    if (startAt > 1) {
+      // para testes: as missões anteriores da fase 2 contam como feitas (e entram no resumo do dia)
+      const done = [MISSAO_LEVANTAMENTO, MISSAO_CACA, MISSAO_PLACAS, MISSAO_FORCA, MISSAO_EXERCICIO].slice(0, startAt - 1);
+      xpLog.current = done.map((m) => ({ mission: m.id, title: m.title, xp: m.xp }));
+      setXpTo(startXp + done.reduce((sum, m) => sum + m.xp, 0));
+      setF2('done');
+      if (startAt === 2) {
+        void s.itGuyWaits().then(() => scene()?.setItAlert(false));
+        void startF2M2();
+        return;
+      }
+      setF2b('done');
+      if (startAt === 3) {
+        void s.itGuyWaits().then(() => startF2M3());
+        return;
+      }
+      setF3('done');
+      if (startAt === 4) {
+        void s.itGuyWaits().then(() => startF2M4());
+        return;
+      }
+      setF4('done');
+      if (startAt === 5) {
+        void startF2M5();
+        return;
+      }
+      setF5('done');
+      void startF2End();
+      return;
+    }
+    await new Promise((r) => window.setTimeout(r, 1800));
+    await whenFree();
+    if (!alive.current) return;
+    say([ceo(MISSAO_LEVANTAMENTO.call, 'ceo-feliz-b', { continueLabel: 'Estou indo!' })], () => {
+      setF2('called');
+      scene()?.setCeoTalk(true);
+      backToExplore();
+    });
+  };
+
+  /** Na Diretoria: a aula (o que é um computador), a tarefa, a prancheta e os adesivos. */
+  const ceoBriefingF2 = () => {
+    const s = scene();
+    if (!s) return;
+    s.setCeoTalk(false);
+    const lines = MISSAO_LEVANTAMENTO.briefing.map((t, i, all) =>
+      ceo(t, 'ceo-feliz-b', i === all.length - 1 ? { continueLabel: 'Pode deixar!', badge: '📋 Prancheta e cartela de adesivos' } : {}),
+    );
+    say(lines, () => {
+      const sc = scene();
+      if (!sc) return;
+      setF2('working');
+      sc.setSpots(spotsForF2());
+      void sc.itGuyWaits();
+      backToExplore();
+    });
+  };
+
+  const onSpotF2 = (id: string) => {
+    if (id === 'tablet') {
+      if (f4Ref.current !== 'crashed' || phaseRef.current !== 'explore') return;
+      say([me(MISSAO_FORCA.found, { continueLabel: 'Pegar o tablet' })], openHangman);
+      return;
+    }
+    if (f3Ref.current === 'called' || f3Ref.current === 'working') {
+      onSpotF3(id);
+      return;
+    }
+    if (id === 'quadro') {
+      if (f2bRef.current !== 'accepted' || phaseRef.current !== 'explore') return;
+      scene()?.setFrozen(true);
+      setPhase('board2');
+      return;
+    }
+    if (f2Ref.current !== 'working' || phaseRef.current !== 'explore') return;
+    const s = scene();
+    if (!s) return;
+    s.setFrozen(true);
+    if (id === 'marcos') {
+      s.itGuyFacePlayer();
+      if (!taggedCount(survey.current)) {
+        say([marcos(MISSAO_LEVANTAMENTO.noneYet)], backToExplore);
+        return;
+      }
+      placeBalloon();
+      setPhase('askF2');
+      return;
+    }
+    setOpenDevice(id);
+    setPhase('survey');
+  };
+
+  const updateTag = (id: string, tag: DeviceTag) => {
+    survey.current = { ...survey.current, [id]: tag };
+    setTagged(taggedCount(survey.current));
+    scene()?.setSticker(id, DEVICE_SPOTS.get(id)!.point, tag.sticker);
+  };
+
+  const closeSurvey = () => {
+    setOpenDevice(null);
+    backToExplore();
+  };
+
+  /** O Marcos confere a prancheta e os adesivos. */
+  const checkSurveyF2 = () => {
+    const s = scene();
+    if (!s) return;
+    setF2('checking');
+    s.setItAlert(false);
+    const problems = checkSurvey(survey.current);
+    if (!problems.length) {
+      addXp(MISSAO_LEVANTAMENTO, MISSAO_LEVANTAMENTO.xp);
+      say(
+        [
+          marcos(MISSAO_LEVANTAMENTO.checking),
+          marcos(MISSAO_LEVANTAMENTO.success(SURVEY_DEVICES.length), {
+            badge: `+${MISSAO_LEVANTAMENTO.xp} XP · Missão concluída!`,
+            continueLabel: 'Valeu, Marcos!',
+          }),
+        ],
+        () => {
+          setF2('done');
+          scene()?.setSpots([]);
+          backToExplore();
+          onMissionComplete?.({ missionId: MISSAO_LEVANTAMENTO.id, xp: MISSAO_LEVANTAMENTO.xp, success: true });
+          void startF2M2();
+        },
+      );
+      return;
+    }
+    addXp(MISSAO_LEVANTAMENTO, -MISSAO_LEVANTAMENTO.penalty, 'O Marcos achou erro no levantamento');
+    const all = explainProblems(problems);
+    const shown = all.slice(0, 6);
+    const details = shown.map((t) => marcos(t));
+    if (all.length > shown.length) details.push(marcos(MISSAO_LEVANTAMENTO.more(all.length - shown.length)));
+    const wrongCount = new Set(problems.map((p) => p.device.id)).size;
+    say(
+      [
+        marcos(MISSAO_LEVANTAMENTO.checking),
+        marcos(MISSAO_LEVANTAMENTO.problems(wrongCount), { badge: `−${MISSAO_LEVANTAMENTO.penalty} XP` }),
+        ...details,
+        marcos(MISSAO_LEVANTAMENTO.fixIt, { continueLabel: 'Vou corrigir' }),
+      ],
+      () => {
+        const sc = scene();
+        if (!sc) return;
+        const before = survey.current;
+        survey.current = clearWrong(before, problems);
+        for (const id of Object.keys(before)) if (!survey.current[id]) sc.setSticker(id, DEVICE_SPOTS.get(id)!.point, null);
+        setTagged(taggedCount(survey.current));
+        sc.setItAlert(true);
+        setF2('working');
+        sc.setSpots(spotsForF2());
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_LEVANTAMENTO.id, xp: -MISSAO_LEVANTAMENTO.penalty, success: false });
+      },
+    );
+  };
+
+  // ------------------------------------------------------------ fase 2, missão 2: caça-palavras no quadro
+
+  const colleague = (index: number) => (text: string, extra: Partial<Line> = {}): Line => ({
+    speaker: PC_MODELS[index].owner,
+    portrait: `colega:${WORKSTATIONS[index].look}`,
+    text,
+    ...extra,
+  });
+  const diego = colleague(MISSAO_CACA.caller);
+
+  /** Três colegas vão até o quadro, que agora tem um caça-palavras; conversam (a câmera mostra) e o Diego chama. */
+  const startF2M2 = async () => {
+    const s = scene();
+    if (!s) return;
+    setF2b('chat');
+    s.setBoardLetters(true);
+    await new Promise((r) => window.setTimeout(r, 1500));
+    if (!alive.current) return;
+    await s.crowdAtBoard([...MISSAO_CACA.colleagues], BOARD_CROWD);
+    if (!alive.current) return;
+    await whenFree();
+    if (!alive.current) return;
+    s.setFrozen(true);
+    setPhase('dialog');
+    await s.lookAt(BOARD.x + BOARD.w / 2, BOARD.y + 90);
+    if (!alive.current) return;
+    say(
+      MISSAO_CACA.chat.map((c) => colleague(c.who)(c.text)),
+      async () => {
+        const sc = scene();
+        if (!sc) return;
+        sc.setFrozen(true);
+        setPhase('dialog');
+        sc.turnWalker(MISSAO_CACA.caller, 'down');
+        sc.setWalkerAlert(MISSAO_CACA.caller, true);
+        await sc.lookAtPlayer();
+        if (!alive.current) return;
+        say([diego(MISSAO_CACA.call, { continueLabel: 'Estou indo!' })], () => {
+          setF2b('called');
+          backToExplore();
+          if (roomRef.current?.id === 'reunioes') meetDiego();
+        });
+      },
+    );
+  };
+
+  /** Chegou na Sala de Reuniões: o Diego explica e pergunta se o ESTAGIÁRIO ajuda. */
+  const meetDiego = () => {
+    scene()?.stopChat();
+    say([diego(MISSAO_CACA.greeting), diego(MISSAO_CACA.plea)], () => {
+      scene()?.setFrozen(true);
+      placeBalloon();
+      setPhase('askF2b');
+    });
+  };
+
+  const acceptF2M2 = () => {
+    say([diego(MISSAO_CACA.accepted, { continueLabel: 'Bora!' })], () => {
+      const s = scene();
+      if (!s) return;
+      setF2b('accepted');
+      s.setWalkerAlert(MISSAO_CACA.caller, false);
+      s.setSpots([{ id: 'quadro', zone: BOARD_ZONE }]);
+      backToExplore();
+    });
+  };
+
+  const finishBoard2 = (result: GameResult | null) => {
+    if (!result) {
+      // desistiu antes de achar todas: precisa refazer (é só chegar no quadro de novo)
+      say([diego(MISSAO_CACA.retry, { continueLabel: 'Vou tentar de novo' })], backToExplore);
+      return;
+    }
+    say([diego(MISSAO_CACA.cheer, { continueLabel: 'Uhuu!' })], async () => {
+      const s = scene();
+      if (!s) return;
+      s.setFrozen(true);
+      setPhase('dialog');
+      s.crowdJump([...MISSAO_CACA.colleagues]);
+      await s.cheer();
+      if (!alive.current) return;
+      addXp(MISSAO_CACA, MISSAO_CACA.xp);
+      say([diego(MISSAO_CACA.success, { badge: `+${MISSAO_CACA.xp} XP · Missão concluída!`, continueLabel: 'De nada!' })], () => {
+        const sc = scene();
+        setF2b('done');
+        sc?.setSpots([]);
+        void sc?.crowdBack([...MISSAO_CACA.colleagues]);
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_CACA.id, xp: MISSAO_CACA.xp, success: true, game: result });
+        void startF2M3();
+      });
+    });
+  };
+
+  // ------------------------------------------------------------ fase 2, missão 3: placas de desenvolvimento
+
+  const hideoutsLeft = () => HIDEOUTS.filter((h) => !searched.current.has(h.id));
+  const spotsForF3 = () => [
+    ...hideoutsLeft().map((h) => ({ id: `busca:${h.id}`, zone: HIDE_SPOTS.get(h.id)!.zone })),
+    { id: 'marcos', zone: IT_ZONE },
+  ];
+  const magnifiersForF3 = () => hideoutsLeft().map((h) => ({ id: h.id, at: HIDE_SPOTS.get(h.id)!.top }));
+
+  /** O Marcos (em pé na Sala de TI) chama o ESTAGIÁRIO. */
+  const startF2M3 = async () => {
+    await new Promise((r) => window.setTimeout(r, 2500));
+    await whenFree();
+    const s = scene();
+    if (!alive.current || !s) return;
+    setF3('called');
+    await s.itGuyWaits();
+    s.setItAlert(true);
+    say([marcos(MISSAO_PLACAS.call, { continueLabel: 'Estou indo!' })], () => {
+      scene()?.setSpots([{ id: 'marcos', zone: IT_ZONE }]);
+      backToExplore();
+    });
+  };
+
+  const onSpotF3 = (id: string) => {
+    if (phaseRef.current !== 'explore') return;
+    const s = scene();
+    if (!s) return;
+    if (id === 'marcos') {
+      s.setFrozen(true);
+      s.itGuyFacePlayer();
+      if (f3Ref.current === 'called') briefingF3();
+      else deliverBoards();
+      return;
+    }
+    const h = HIDEOUTS.find((x) => `busca:${x.id}` === id);
+    if (f3Ref.current !== 'working' || !h || searched.current.has(h.id)) return;
+    void searchHideout(h);
+  };
+
+  /** Na Sala de TI: a aula (Arduino e Raspberry Pi) e a tarefa. */
+  const briefingF3 = () => {
+    scene()?.setItAlert(false);
+    const lines = MISSAO_PLACAS.briefing.map((t, i, all) =>
+      marcos(t, i === all.length - 1 ? { continueLabel: 'Vou procurar!', badge: '🔍 Procure nos móveis com uma lupa em cima' } : {}),
+    );
+    say(lines, () => {
+      const sc = scene();
+      if (!sc) return;
+      setF3('working');
+      sc.setMagnifiers(magnifiersForF3());
+      sc.setSpots(spotsForF3());
+      backToExplore();
+    });
+  };
+
+  /** Procura no móvel: animação e cronômetro na cena; a lupa some e as placas (se tiver) caem no chão. */
+  const searchHideout = async (h: Hideout) => {
+    const s = scene();
+    if (!s) return;
+    searched.current.add(h.id);
+    s.setFrozen(true);
+    setPhase('search');
+    s.setMagnifiers(magnifiersForF3());
+    s.setSpots(spotsForF3());
+    await s.search(
+      HIDE_SPOTS.get(h.id)!,
+      h.boards.map((model, k) => ({ id: `${h.id}:${k}`, family: BOARDS[model].family })),
+    );
+    if (!alive.current) return;
+    backToExplore();
+    setToast(h.boards.length ? MISSAO_PLACAS.found(h.boards.length) : MISSAO_PLACAS.empty(h.where));
+  };
+
+  /** Chegou perto de uma placa no chão: ela aparece grande. */
+  const pickUp = (id: string) => {
+    const b = boardById(id);
+    if (!b || f3Ref.current !== 'working') return;
+    scene()?.setFrozen(true);
+    setPicked({ model: b.model, count: collectedRef.current + 1 });
+    setPhase('placa');
+  };
+
+  /** A placa em destaque some e conta mais uma. */
+  const storeBoard = () => {
+    collectedRef.current += 1;
+    setCollected(collectedRef.current);
+    setPicked(null);
+    backToExplore();
+    if (collectedRef.current === BOARD_TOTAL) setToast(MISSAO_PLACAS.allFound);
+  };
+
+  /** Entrega para o Marcos: com as 10, ganha XP; faltando, ele diz quantas e manda voltar a procurar. */
+  const deliverBoards = () => {
+    const r = checkDelivery(collectedRef.current, searched.current.size);
+    if (!r.ok) {
+      const text = r.got ? MISSAO_PLACAS.missing(r.got, r.missing, r.allSearched) : MISSAO_PLACAS.noneYet;
+      say([marcos(text, { continueLabel: 'Vou procurar' })], backToExplore);
+      return;
+    }
+    const s = scene();
+    if (!s) return;
+    addXp(MISSAO_PLACAS, MISSAO_PLACAS.xp);
+    setF3('done');
+    s.setSpots([]);
+    s.setItAlert(false);
+    say([marcos(MISSAO_PLACAS.success, { badge: `+${MISSAO_PLACAS.xp} XP · Missão concluída!`, continueLabel: 'Uhuu!' })], async () => {
+      const sc = scene();
+      if (!sc) return;
+      sc.setFrozen(true);
+      setPhase('dialog');
+      await sc.cheer();
+      if (!alive.current) return;
+      backToExplore();
+      onMissionComplete?.({ missionId: MISSAO_PLACAS.id, xp: MISSAO_PLACAS.xp, success: true });
+      void startF2M4();
+    });
+  };
+
+  // ------------------------------------------------------------ fase 2, missão 4: a forca do tablet do Marcos
+
+  /** O ESTAGIÁRIO pensando alto. */
+  const me = (text: string, extra: Partial<Line> = {}): Line => ({ speaker: 'ESTAGIÁRIO', portrait: 'estagiario', text, ...extra });
+
+  /** O Marcos senta para jogar forca no tablet; o relógio do topo passa o tempo e ele cochila. */
+  const startF2M4 = async () => {
+    await new Promise((r) => window.setTimeout(r, 1500));
+    await whenFree();
+    const s = scene();
+    if (!alive.current || !s) return;
+    setF4('resting');
+    say([marcos(MISSAO_FORCA.rest, { continueLabel: 'Bom descanso!' })], async () => {
+      const sc = scene();
+      if (!sc) return;
+      sc.setFrozen(true);
+      setPhase('dialog');
+      await sc.itGuySitsDown();
+      if (!alive.current) return;
+      sc.setItTablet(true);
+      await sc.lookAt(IT_SEAT.x, IT_SEAT.y);
+      if (!alive.current) return;
+      setClockShow(true);
+    });
+  };
+
+  /** Passou o tempo: ele dorme, o tablet cai (PLAFT) e a musiquinha do jogo continua tocando. */
+  const clockDone = async () => {
+    setClockShow(false);
+    const s = scene();
+    if (!s) return;
+    s.setItSleeping(true);
+    await new Promise((r) => window.setTimeout(r, 1600));
+    if (!alive.current) return;
+    playThud();
+    await s.dropTablet();
+    jingle.current?.stop();
+    jingle.current = startJingle();
+    setF4('crashed');
+    setToast(MISSAO_FORCA.crash);
+    await new Promise((r) => window.setTimeout(r, 1300));
+    await s.lookAtPlayer();
+    if (!alive.current) return;
+    say([me(MISSAO_FORCA.heard)], () => {
+      scene()?.setSpots([{ id: 'tablet', zone: IT_TABLET_ZONE }]);
+      backToExplore();
+    });
+  };
+
+  // a musiquinha fica mais alta perto do tablet
+  useEffect(() => {
+    if (f4 !== 'crashed' && f4 !== 'playing') return;
+    const id = window.setInterval(() => {
+      const p = scene()?.playerFeet();
+      if (p) jingle.current?.setVolume(jingleVolume(Math.hypot(p.x - IT_TABLET_FLOOR.x, p.y - IT_TABLET_FLOOR.y)));
+    }, 200);
+    return () => window.clearInterval(id);
+  }, [f4]);
+
+  // sai da página (ou recomeça o dia) com a musiquinha tocando: para
+  useEffect(() => () => jingle.current?.stop(), []);
+
+  const openHangman = () => {
+    setF4('playing');
+    scene()?.setFrozen(true);
+    setPhase('hangman');
+  };
+
+  /** Fechou o tablet: com as 5 palavras certas, o Marcos acorda e o ESTAGIÁRIO sai correndo; senão, tenta de novo. */
+  const finishHangman = (result: GameResult | null) => {
+    const check = result ? checkHangman(result) : null;
+    if (!result || !check?.solved) {
+      setF4('crashed');
+      const text = check ? MISSAO_FORCA.retry(check.wordsWon, check.words) : MISSAO_FORCA.gaveUp;
+      say([me(text)], backToExplore);
+      return;
+    }
+    setF4('escaping');
+    scene()?.setSpots([]);
+    say([me(MISSAO_FORCA.solved)], async () => {
+      const s = scene();
+      if (!s) return;
+      s.setFrozen(true);
+      setPhase('dialog');
+      jingle.current?.stop();
+      jingle.current = null;
+      s.itWakes();
+      await new Promise((r) => window.setTimeout(r, 700));
+      if (!alive.current) return;
+      say([marcos(MISSAO_FORCA.waking), me(MISSAO_FORCA.escape, { continueLabel: 'Correr!' })], async () => {
+        const sc = scene();
+        if (!sc) return;
+        sc.setFrozen(true);
+        setPhase('dialog');
+        await sc.tabletToDesk();
+        if (!alive.current) return;
+        await sc.playerRunTo(IT_EXIT);
+        if (!alive.current) return;
+        addXp(MISSAO_FORCA, MISSAO_FORCA.xp);
+        setF4('done');
+        say([me(MISSAO_FORCA.success, { badge: `+${MISSAO_FORCA.xp} XP · Missão concluída!`, continueLabel: 'Ufa!' })], () => {
+          backToExplore();
+          onMissionComplete?.({ missionId: MISSAO_FORCA.id, xp: MISSAO_FORCA.xp, success: true, game: result });
+          void startF2M5();
+        });
+      });
+    });
+  };
+
+  // ------------------------------------------------------------ fase 2, missão 5: o exercício surpresa no celular
+
+  /** Logo depois da fuga, o celular vibra: mensagem do amigo do curso. */
+  const startF2M5 = async () => {
+    await new Promise((r) => window.setTimeout(r, 1500));
+    await whenFree();
+    const s = scene();
+    if (!alive.current || !s) return;
+    s.setFrozen(true);
+    setPhase('dialog');
+    setF5('ringing');
+    s.setPhoneRinging(true);
+    playMessageTone();
+    setToast(MISSAO_EXERCICIO.ring);
+    await new Promise((r) => window.setTimeout(r, 1600));
+    if (!alive.current) return;
+    say([me(MISSAO_EXERCICIO.notice, { continueLabel: 'Abrir o celular' })], openPhone);
+  };
+
+  const openPhone = () => {
+    const s = scene();
+    s?.setPhoneRinging(false);
+    s?.setFrozen(true);
+    if (f5Ref.current === 'ringing') setF5('pending');
+    setPhase('phone');
+  };
+
+  const sendExercise = (result: GameResult) => {
+    lastExercise.current = result;
+    attemptsRef.current = [...attemptsRef.current, checkExercise(result)];
+    setAttempts(attemptsRef.current);
+  };
+
+  /** Guardou o celular: com o exercício certo, ganha o XP; senão, dá para abrir de novo pelo botão do topo. */
+  const closePhone = () => {
+    phoneSeen.current = true;
+    const last = attemptsRef.current[attemptsRef.current.length - 1];
+    if (!last?.passed) {
+      say([me(MISSAO_EXERCICIO.gaveUp)], backToExplore);
+      return;
+    }
+    addXp(MISSAO_EXERCICIO, MISSAO_EXERCICIO.xp);
+    setF5('done');
+    say([me(MISSAO_EXERCICIO.success, { badge: `+${MISSAO_EXERCICIO.xp} XP · Missão concluída!`, continueLabel: 'Boa!' })], () => {
+      backToExplore();
+      onMissionComplete?.({
+        missionId: MISSAO_EXERCICIO.id,
+        xp: MISSAO_EXERCICIO.xp,
+        success: true,
+        game: lastExercise.current ?? undefined,
+      });
+      void startF2End();
+    });
+  };
+
+  // ------------------------------------------------------------ fim do 2º dia: dispensado
+
+  /** Depois do exercício, o chefe chama o ESTAGIÁRIO na Diretoria. */
+  const startF2End = async () => {
+    await new Promise((r) => window.setTimeout(r, 1800));
+    await whenFree();
+    if (!alive.current) return;
+    say([ceo(FIM_DIA2.call, 'ceo-feliz-b', { continueLabel: 'Estou indo!' })], () => {
+      setFEnd('called');
+      scene()?.setCeoTalk(true);
+      backToExplore();
+    });
+  };
+
+  /** Na Diretoria: elogia o dia e dispensa o ESTAGIÁRIO. */
+  const ceoDismiss = () => {
+    scene()?.setCeoTalk(false);
+    const lines = FIM_DIA2.dismiss.map((t, i, all) => ceo(t, 'ceo-feliz-b', i === all.length - 1 ? { continueLabel: 'Até amanhã!' } : {}));
+    say(lines, () => {
+      setFEnd('leaving');
+      setToast(FIM_DIA2.leaving);
+      backToExplore();
+    });
+  };
+
+  /** Saiu pela porta principal: vai para a calçada, comemora e vê o resumo do 2º dia. */
+  const leaveDay2 = async () => {
+    const s = scene();
+    if (!s) return;
+    setFEnd('done');
+    s.setFrozen(true);
+    setPhase('dialog');
+    await s.playerRunTo({ x: s.playerFeet().x, y: SPAWN.y });
+    if (!alive.current) return;
+    await s.cheer();
+    if (!alive.current) return;
+    say([{ speaker: 'ESTAGIÁRIO', portrait: 'viva-a', text: FIM_DIA2.victory, badge: 'Fase 2 concluída!', continueLabel: 'Ver o resumo do dia' }], () => {
+      scene()?.setFrozen(true);
+      setPhase('summary');
+      onDayComplete?.({ total: xpNow.current, entries: xpLog.current });
+    });
+  };
+
+  /** Para testes: pula direto para a missão 2 a 6 (as anteriores entram no resumo como feitas, sem bronca). */
+  const skipTo = (n: 2 | 3 | 4 | 5 | 6) => {
+    const done = [MISSAO_CEO, MISSAO_PCS, MISSAO_MONTAGEM, MISSAO_QUADRO, MISSAO_PROVA].slice(0, n - 1);
+    xpLog.current = done.map((m) => ({ mission: m.id, title: m.title, xp: m.xp }));
+    setMissionDone(true);
+    setEnteredBuilding(true);
+    scene()?.setCeoTalk(false);
+    scene()?.setCeoMood('tranquilo');
+    if (n === 2) {
+      setXpTo(MISSAO_CEO.xp);
+      briefing();
+      return;
+    }
+    setM2('done');
+    if (n === 3) {
+      setXpTo(MISSAO_CEO.xp + MISSAO_PCS.xp);
+      callToRh();
+      return;
+    }
+    setM3('done');
+    RH_STATIONS.forEach((st) => scene()?.setRhStation(st.index, { built: true, boxOpen: true }));
+    if (n === 4) {
+      setXpTo(MISSAO_CEO.xp + MISSAO_PCS.xp + MISSAO_MONTAGEM.xp);
+      void startMission4();
+      return;
+    }
+    setM4('done');
+    if (n === 5) {
+      setXpTo(MISSAO_CEO.xp + MISSAO_PCS.xp + MISSAO_MONTAGEM.xp + MISSAO_QUADRO.xp);
+      void startMission5();
+      return;
+    }
+    setXpTo(MISSAO_CEO.xp + MISSAO_PCS.xp + MISSAO_MONTAGEM.xp + MISSAO_QUADRO.xp + MISSAO_PROVA.xp);
+    setM5('done');
+    void startMission6();
+  };
+
+  handlers.current = {
+    talk: () => {
+      if (fase === 2) {
+        if (f2Ref.current === 'called') ceoBriefingF2();
+        else if (fEndRef.current === 'called') ceoDismiss();
+        return;
+      }
+      if (m6Ref.current === 'called') {
+        ceoBriefing6();
+        return;
+      }
+      if (m2Ref.current === 'called') {
+        scolding();
+        return;
+      }
+      if (missionDone) return;
+      scene()?.setFrozen(true);
+      setPhase('greeting');
+    },
+    pc: openStation,
+    box: openBox,
+    spot: (id) => (fase === 2 ? onSpotF2(id) : onSpot(id)),
+    pickup: pickUp,
+    room: (r) => {
+      if (!started.current) {
+        started.current = true;
+        if (fase === 2) void startDay2();
+        else if (startAt > 1) skipTo(startAt as 2 | 3 | 4 | 5 | 6);
+      }
+      if (r?.id === 'rh' && m3Ref.current === 'called') void meetRita();
+      if (r?.id === 'reunioes' && m4Ref.current === 'called' && phaseRef.current === 'explore') meetBruno();
+      if (r?.id === 'reunioes' && f2bRef.current === 'called' && phaseRef.current === 'explore') meetDiego();
+      if (r?.id === 'copa' && m5Ref.current === 'called' && phaseRef.current === 'explore') meetElisa();
+      if (r?.id === 'entrada' && m6Ref.current === 'armed') void lockUp();
+      if (r?.id === 'entrada' && fEndRef.current === 'leaving') void leaveDay2();
+    },
+    endRound: (r) => void endRound(r),
+  };
+
+  // ------------------------------------------------------------ tela
+
+  let objective: { title: string; text: string; done: boolean };
+  if (fase === 2 && fEnd !== 'off') {
+    objective =
+      fEnd === 'done'
+        ? { title: 'Fase 2 concluída:', text: 'Fim do 2º dia de estágio. Até amanhã!', done: true }
+        : { title: 'Fase 2 · Fim do dia.', text: fEnd === 'called' ? OBJETIVOS.chefeDia2 : OBJETIVOS.embora, done: false };
+  } else if (fase === 2 && f5 !== 'off') {
+    if (f5 === 'done') {
+      objective = { title: 'Missão concluída:', text: `${MISSAO_EXERCICIO.title} (+${MISSAO_EXERCICIO.xp} XP). Explore o escritório à vontade.`, done: true };
+    } else {
+      objective = { title: `Fase 2 · Missão 5: ${MISSAO_EXERCICIO.title}.`, text: f5 === 'ringing' ? OBJETIVOS.celular : OBJETIVOS.exercicio, done: false };
+    }
+  } else if (fase === 2 && f4 !== 'off') {
+    if (f4 === 'done') {
+      objective = { title: 'Missão concluída:', text: `${MISSAO_FORCA.title} (+${MISSAO_FORCA.xp} XP). Explore o escritório à vontade.`, done: true };
+    } else {
+      const text = f4 === 'resting' ? OBJETIVOS.descanso : f4 === 'crashed' ? OBJETIVOS.barulho : OBJETIVOS.forcaTablet;
+      objective = { title: `Fase 2 · Missão 4: ${MISSAO_FORCA.title}.`, text, done: false };
+    }
+  } else if (fase === 2 && f3 !== 'off') {
+    if (f3 === 'done') {
+      objective = { title: 'Missão concluída:', text: `${MISSAO_PLACAS.title} (+${MISSAO_PLACAS.xp} XP). Explore o escritório à vontade.`, done: true };
+    } else {
+      const text =
+        f3 === 'called' ? OBJETIVOS.ti3 : collected < BOARD_TOTAL ? `${OBJETIVOS.procurar} (${collected}|${BOARD_TOTAL}).` : OBJETIVOS.levarPlacas;
+      objective = { title: `Fase 2 · Missão 3: ${MISSAO_PLACAS.title}.`, text, done: false };
+    }
+  } else if (fase === 2 && f2b !== 'off') {
+    const title = `Fase 2 · Missão 2: ${MISSAO_CACA.title}.`;
+    if (f2b === 'done') {
+      objective = { title: 'Missão concluída:', text: `${MISSAO_CACA.title} (+${MISSAO_CACA.xp} XP). Explore o escritório à vontade.`, done: true };
+    } else {
+      const text = f2b === 'chat' ? 'O pessoal está reunido no quadro da Sala de Reuniões…' : f2b === 'called' ? OBJETIVOS.reuniao2 : OBJETIVOS.quadro2;
+      objective = { title, text, done: false };
+    }
+  } else if (fase === 2) {
+    const title = `Fase 2 · Missão 1: ${MISSAO_LEVANTAMENTO.title}.`;
+    if (f2 === 'done') {
+      objective = { title: 'Missão concluída:', text: `${MISSAO_LEVANTAMENTO.title} (+${MISSAO_LEVANTAMENTO.xp} XP). Explore o escritório à vontade.`, done: true };
+    } else if (f2 === 'working') {
+      objective = { title, text: `${OBJETIVOS.levantar} (${tagged} ${tagged === 1 ? 'etiquetado' : 'etiquetados'}). ${OBJETIVOS.entregar}.`, done: false };
+    } else if (f2 === 'checking') {
+      objective = { title, text: OBJETIVOS.conferindo2, done: false };
+    } else {
+      objective = { title, text: f2 === 'called' ? OBJETIVOS.chefe2 : OBJETIVOS.entrar, done: false };
+    }
+  } else if (!missionDone) {
+    objective = { title: `Missão: ${MISSAO_CEO.title}.`, text: enteredBuilding ? OBJETIVOS.ceo : OBJETIVOS.entrar, done: false };
+  } else if (m2 === 'off') {
+    objective = { title: 'Missão concluída:', text: `${MISSAO_CEO.title} (+${MISSAO_CEO.xp} XP)`, done: true };
+  } else if (m6 !== 'off') {
+    const text =
+      m6 === 'leaving'
+        ? OBJETIVOS.saindo
+        : m6 === 'called'
+          ? OBJETIVOS.chefe
+          : m6 === 'working'
+            ? `${OBJETIVOS.desligar} (${OFFICE_PCS.length - pcsOn}/${OFFICE_PCS.length} desligados). Depois, ative o alarme ao lado da porta.`
+            : m6 === 'armed'
+              ? OBJETIVOS.sair
+              : m6 === 'checking'
+                ? OBJETIVOS.conferindo6
+                : `${MISSAO_FIM.title} (+${MISSAO_FIM.xp} XP). Fim do primeiro dia de estágio!`;
+    objective = { title: m6 === 'done' ? 'Fase 1 concluída:' : `Missão 6: ${MISSAO_FIM.title}.`, text, done: m6 === 'done' };
+  } else if (m5 === 'called') {
+    objective = { title: `Missão 5: ${MISSAO_PROVA.title}.`, text: OBJETIVOS.prova, done: false };
+  } else if (m5 === 'done') {
+    objective = { title: 'Missão concluída:', text: `${MISSAO_PROVA.title} (+${MISSAO_PROVA.xp} XP). Explore o escritório à vontade.`, done: true };
+  } else if (m3 === 'done' && m4 === 'called') {
+    objective = { title: `Missão 4: ${MISSAO_QUADRO.title}.`, text: OBJETIVOS.quadro, done: false };
+  } else if (m4 === 'done') {
+    objective = { title: 'Missão concluída:', text: `${MISSAO_QUADRO.title} (+${MISSAO_QUADRO.xp} XP). Explore o escritório à vontade.`, done: true };
+  } else if (m2 === 'done' && (m3 === 'off' || m3 === 'done')) {
+    const last = m3 === 'done' ? MISSAO_MONTAGEM : MISSAO_PCS;
+    objective = { title: 'Missão concluída:', text: `${last.title} (+${last.xp} XP). Explore o escritório à vontade.`, done: true };
+  } else if (m2 === 'done') {
+    const text =
+      m3 === 'called'
+        ? OBJETIVOS.rh
+        : m3 === 'working'
+          ? `${OBJETIVOS.montar} (${kitsDone}/${KITS.length} prontos)`
+          : m3 === 'checking'
+            ? OBJETIVOS.conferindo
+            : OBJETIVOS.corrigir;
+    objective = { title: `Missão 3: ${MISSAO_MONTAGEM.title}.`, text, done: false };
+  } else {
+    const text =
+      m2 === 'running'
+        ? `${OBJETIVOS.ligar} (${signCount}/${PC_MODELS.length} placas)`
+        : m2 === 'called'
+          ? OBJETIVOS.chamado
+          : OBJETIVOS.voltando;
+    objective = { title: `Missão 2: ${MISSAO_PCS.title}.`, text, done: false };
+  }
+
+  const line = dialog?.lines[dialog.i];
+
+  return (
+    <div className="office-game">
+      <div className="office-hud">
+        <span className="office-room" aria-live="polite">
+          📍 {room ? room.name : CORRIDOR_NAME}
+        </span>
+        <span className="office-xp" title="Experiência acumulada">
+          ⭐ {xp} XP
+        </span>
+        {m2 === 'running' && (
+          <span className={secondsLeft <= 30 ? 'office-timer is-low' : 'office-timer'} title="Tempo até a equipe voltar da reunião">
+            ⏱ {formatTime(secondsLeft)}
+          </span>
+        )}
+        {f3 === 'working' && (
+          <span className={collected === BOARD_TOTAL ? 'office-boards is-full' : 'office-boards'} title="Placas de desenvolvimento encontradas">
+            <span aria-hidden="true">🔌</span>
+            <span>
+              <strong key={collected}>{collected}</strong>|{BOARD_TOTAL}
+            </span>
+          </span>
+        )}
+        {f5 === 'pending' && (
+          <button type="button" className="office-phone-hud" disabled={phase !== 'explore'} onClick={openPhone}>
+            📱 Celular
+          </button>
+        )}
+        <span className="office-spacer" />
+        <button
+          type="button"
+          aria-pressed={overview}
+          onClick={() => {
+            scene()?.setOverview(!overview);
+            refocus();
+          }}
+        >
+          🗺️ Visão geral <kbd>M</kbd>
+        </button>
+        <button
+          type="button"
+          aria-pressed={debug}
+          onClick={() => {
+            scene()?.setDebug(!debug);
+            refocus();
+          }}
+        >
+          🧱 Colisões <kbd>C</kbd>
+        </button>
+      </div>
+      <p className={objective.done ? 'office-objective done' : 'office-objective'}>
+        🎯 <strong>{objective.title}</strong> {objective.text}
+      </p>
+
+      <div className="office-stage" ref={stageRef}>
+        <div
+          ref={hostRef}
+          className="office-canvas"
+          tabIndex={0}
+          aria-label="Escritório. Use as setas ou W A S D para andar."
+          onPointerDown={refocus}
+        />
+
+        {clockShow && (
+          <RelogioPassando
+            from={MISSAO_FORCA.clockFrom}
+            minutes={MISSAO_FORCA.clockMinutes}
+            caption={MISSAO_FORCA.later}
+            onDone={() => void clockDone()}
+          />
+        )}
+        {toast && (
+          <div className="office-toast" role="status">
+            {toast}
+          </div>
+        )}
+
+        {phase === 'greeting' && (
+          <DialogBox
+            speaker={MISSAO_CEO.speaker}
+            portrait="ceo-bravo-a"
+            text={MISSAO_CEO.greeting}
+            onContinue={() => {
+              placeBalloon();
+              setPhase('ask');
+            }}
+          />
+        )}
+        {phase === 'ask' && (
+          <ChoiceBalloon
+            text={MISSAO_CEO.question}
+            at={balloonAt}
+            onChoose={(yes) => setPhase(yes ? 'playing' : 'declined')}
+          />
+        )}
+        {phase === 'declined' && (
+          <DialogBox speaker={MISSAO_CEO.speaker} portrait="ceo-bravo-b" text={MISSAO_CEO.declined} onContinue={backToExplore} />
+        )}
+        {phase === 'ask4' && (
+          <ChoiceBalloon
+            text={MISSAO_QUADRO.question}
+            at={balloonAt}
+            onChoose={(yes) => {
+              if (yes) setPhase('board');
+              else say([bruno(MISSAO_QUADRO.declined)], backToExplore);
+            }}
+          />
+        )}
+        {phase === 'ask5' && (
+          <ChoiceBalloon
+            text={MISSAO_PROVA.question}
+            at={balloonAt}
+            onChoose={(yes) => {
+              if (yes) setPhase('tablet');
+              else say([elisa(MISSAO_PROVA.declined)], backToExplore);
+            }}
+          />
+        )}
+        {phase === 'tablet' && (
+          <TabletOverlay heading="Prova de informática da Elisa" game={quiz ?? QUIZ_PADRAO} onClose={finishTablet} />
+        )}
+        {phase === 'os' && openOs && (
+          <DesktopModal
+            key={openOs}
+            pc={OFFICE_PCS.find((pc) => pc.id === openOs)!}
+            state={power.current[openOs]}
+            onChange={(st) => updatePower(openOs, st)}
+            onClose={closeOs}
+          />
+        )}
+        {phase === 'alarm' && <AlarmPanel code={MISSAO_FIM.code} onArm={armAlarm} onClose={backToExplore} />}
+        {phase === 'summary' && (
+          <DaySummary
+            day={fase}
+            total={xp}
+            startXp={fase === 2 ? startXp : 0}
+            entries={xpLog.current}
+            onRestart={onRestart}
+            onClose={backToExplore}
+            onNextDay={fase === 1 ? () => onNextDay(xpNow.current) : undefined}
+          />
+        )}
+        {phase === 'survey' && openDevice && (
+          <LevantamentoModal
+            key={openDevice}
+            device={SURVEY_DEVICES.find((d) => d.id === openDevice)!}
+            survey={survey.current}
+            onChange={(tag) => updateTag(openDevice, tag)}
+            onClose={closeSurvey}
+          />
+        )}
+        {phase === 'askF2b' && (
+          <ChoiceBalloon
+            text={MISSAO_CACA.question}
+            at={balloonAt}
+            onChoose={(yes) => {
+              if (yes) acceptF2M2();
+              else say([diego(MISSAO_CACA.declined)], backToExplore);
+            }}
+          />
+        )}
+        {phase === 'board2' && (
+          <QuadroOverlay
+            heading="Ache as palavras do quadro da reunião"
+            game={wordSearch ?? CACA_PALAVRAS_PADRAO}
+            gameType="CACA_PALAVRAS"
+            onClose={finishBoard2}
+          />
+        )}
+        {phase === 'placa' && picked && <PlacaDestaque key={picked.count} model={picked.model} count={picked.count} onDone={storeBoard} />}
+        {phase === 'hangman' && (
+          <TabletOverlay
+            heading="Forca do Marcos"
+            game={hangman ?? FORCA_PADRAO}
+            gameType="FORCA"
+            holder="estagiario"
+            doneLabel="Pronto"
+            onClose={finishHangman}
+          />
+        )}
+        {phase === 'phone' && (
+          <CelularOverlay
+            game={surpriseQuiz ?? QUIZ_SURPRESA_PADRAO}
+            attempts={attempts}
+            intro={!phoneSeen.current}
+            onAttempt={sendExercise}
+            onClose={closePhone}
+          />
+        )}
+        {phase === 'askF2' && (
+          <ChoiceBalloon
+            text={MISSAO_LEVANTAMENTO.question(tagged)}
+            at={balloonAt}
+            onChoose={(yes) => {
+              if (yes) checkSurveyF2();
+              else say([marcos(MISSAO_LEVANTAMENTO.declined)], backToExplore);
+            }}
+          />
+        )}
+        {phase === 'board' && (
+          <QuadroOverlay heading="Ajude o Bruno a arrumar as frases" game={phrases ?? FRASES_PADRAO} onClose={finishBoard} />
+        )}
+        {phase === 'playing' && (
+          <MinigameOverlay heading="Ajude o CEO a resolver" game={crossword ?? CRUZADAS_PADRAO} onClose={finishGame} />
+        )}
+        {phase === 'dialog' && line && (
+          <DialogBox
+            key={`${dialog.i}:${line.text}`}
+            speaker={line.speaker}
+            portrait={line.portrait}
+            text={line.text}
+            badge={line.badge}
+            continueLabel={line.continueLabel}
+            onContinue={nextLine}
+          />
+        )}
+        {phase === 'kit' && openKit !== null && (
+          <MontagemModal
+            key={openKit}
+            kit={KITS[openKit]}
+            state={kitStates.current[openKit]}
+            onChange={(st) => updateKit(openKit, st)}
+            onClose={(done) => closeKit(openKit, done)}
+          />
+        )}
+        {phase === 'pc' && openPc !== null && (
+          <PcModal
+            key={openPc}
+            index={openPc}
+            model={PC_MODELS[openPc]}
+            state={pcStates.current[openPc]}
+            secondsLeft={secondsLeft}
+            onChange={(st) => updatePc(openPc, st)}
+            onClose={(signed) => closePc(openPc, signed)}
+          />
+        )}
+
+        <div className="office-dpad" aria-hidden="true">
+          {DPAD.map((b) => (
+            <button
+              key={b.area}
+              type="button"
+              tabIndex={-1}
+              style={{ gridArea: b.area }}
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId);
+                scene()?.setTouchDirection(b.x, b.y);
+              }}
+              onPointerUp={() => scene()?.setTouchDirection(0, 0)}
+              onPointerCancel={() => scene()?.setTouchDirection(0, 0)}
+            >
+              {b.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="office-help">
+        <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> ou <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> para andar ·
+        segure <kbd>Shift</kbd> para correr · clique no jogo se o teclado não responder
+      </p>
+    </div>
+  );
+}

@@ -1,0 +1,263 @@
+// Modelo de dados completo do plano (Fases 1 a 5).
+// A Fase 1 só usa `User`; as demais tabelas já ficam criadas para as próximas fases.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  INSTRUCTOR
+  STUDENT
+}
+
+enum GameType {
+  CRUZADAS
+  FORCA
+  CACA_PALAVRAS
+  QUIZ
+  COMPLETE_FRASES
+}
+
+// Nível de dificuldade (mesmos valores do pacote de jogos: easy/normal/hard = Fácil/Normal/Difícil)
+enum Level {
+  easy
+  normal
+  hard
+}
+
+model User {
+  id                 String   @id @default(uuid()) @db.Uuid
+  name               String
+  // identificador de acesso: e-mail ou matrícula (sempre minúsculo, sem espaços)
+  login              String   @unique
+  email              String?  @unique
+  registration       String?  // matrícula (opcional)
+  passwordHash       String   @map("password_hash")
+  role               Role
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  teams       Team[]        @relation("TeamInstructor")
+  enrollments TeamStudent[]
+  activities  Activity[]
+  scores      GameScore[]
+  feedbacks   Feedback[]
+  savedGames  SavedGame[]
+  levels      StudentLevel[]
+  levelEvents LevelEvent[]
+  gameStarts  GameStart[]
+  tutorMessages TutorMessage[]
+
+  @@map("users")
+}
+
+model Team {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  shift        String?  // turno
+  instructorId String   @map("instructor_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  instructor User          @relation("TeamInstructor", fields: [instructorId], references: [id])
+  students   TeamStudent[]
+  activities ActivityTeam[]
+
+  @@index([instructorId])
+  @@map("teams")
+}
+
+model TeamStudent {
+  teamId    String @map("team_id") @db.Uuid
+  studentId String @map("student_id") @db.Uuid
+
+  team    Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, studentId])
+  @@index([studentId])
+  @@map("team_students")
+}
+
+model Activity {
+  id           String    @id @default(uuid()) @db.Uuid
+  title        String
+  // texto rico + blocos de jogo (cada bloco tem um blockId estável)
+  contentJson  Json      @default("{}") @map("content_json")
+  instructorId String    @map("instructor_id") @db.Uuid
+  publishedAt  DateTime? @map("published_at") // null = rascunho
+  dueAt        DateTime? @map("due_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  instructor User           @relation(fields: [instructorId], references: [id])
+  teams      ActivityTeam[]
+  scores     GameScore[]
+  feedbacks  Feedback[]
+  gameStarts GameStart[]
+  tutorMessages TutorMessage[]
+
+  @@index([instructorId])
+  @@map("activities")
+}
+
+model ActivityTeam {
+  activityId String @map("activity_id") @db.Uuid
+  teamId     String @map("team_id") @db.Uuid
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([activityId, teamId])
+  @@index([teamId])
+  @@map("activity_teams")
+}
+
+model GameScore {
+  id              String   @id @default(uuid()) @db.Uuid
+  studentId       String   @map("student_id") @db.Uuid
+  activityId      String   @map("activity_id") @db.Uuid
+  // uma atividade pode ter vários jogos do mesmo tipo: blockId identifica qual
+  blockId         String   @map("block_id")
+  gameType        GameType @map("game_type")
+  score           Int
+  maxScore        Int      @map("max_score")
+  durationSeconds Int?     @map("duration_seconds")
+  details         Json?
+  // Aprendizado personalizado: nível jogado (só em jogo adaptativo), desempenho 0–100 e como foi
+  // calculado (acerto, ritmo, chutes…), para todo jogo
+  level           Level?
+  performance     Int?
+  metrics         Json?
+  completedAt     DateTime @default(now()) @map("completed_at")
+
+  student  User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, activityId, blockId])
+  @@index([activityId])
+  @@map("game_scores")
+}
+
+model Feedback {
+  id         String   @id @default(uuid()) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  activityId String   @map("activity_id") @db.Uuid
+  rating     Int      // 1 a 5 (validado na API)
+  comment    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  student  User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, activityId])
+  @@map("feedbacks")
+}
+
+// Biblioteca do instrutor: jogos prontos para reutilizar em várias atividades.
+// Ao inserir numa atividade o jogo é COPIADO (a atividade guarda a própria configuração).
+model SavedGame {
+  id           String   @id @default(uuid()) @db.Uuid
+  instructorId String   @map("instructor_id") @db.Uuid
+  gameType     GameType @map("game_type")
+  title        String
+  config       Json
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  instructor User @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@index([instructorId])
+  @@map("saved_games")
+}
+
+// ---------- Aprendizado personalizado ----------
+
+// Nível atual do aluno em cada tipo de jogo (vale para todas as atividades)
+model StudentLevel {
+  studentId       String   @map("student_id") @db.Uuid
+  gameType        GameType @map("game_type")
+  level           Level    @default(normal)
+  // > 0: desempenhos bons seguidos (para subir); < 0: baixos seguidos (para descer)
+  streak          Int      @default(0)
+  // fixado pelo instrutor: o nível não muda sozinho
+  locked          Boolean  @default(false)
+  games           Int      @default(0) // partidas adaptativas já contadas
+  lastPerformance Int?     @map("last_performance")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, gameType])
+  @@map("student_levels")
+}
+
+// Histórico: cada partida adaptativa e cada ajuste manual do instrutor
+model LevelEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  gameType    GameType @map("game_type")
+  fromLevel   Level?   @map("from_level")
+  toLevel     Level    @map("to_level")
+  performance Int?
+  reason      String
+  source      String // GAME | INSTRUCTOR
+  activityId  String?  @map("activity_id") @db.Uuid
+  blockId     String?  @map("block_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, gameType, createdAt])
+  @@map("level_events")
+}
+
+// Aluno clicou em "Começar" num jogo da atividade. No jogo adaptativo isso trava o nível daquele
+// jogo para o aluno (a configuração não muda no meio da partida).
+model GameStart {
+  studentId  String   @map("student_id") @db.Uuid
+  activityId String   @map("activity_id") @db.Uuid
+  blockId    String   @map("block_id")
+  level      Level?
+  startedAt  DateTime @default(now()) @map("started_at")
+
+  student  User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, activityId, blockId])
+  @@index([activityId])
+  @@map("game_starts")
+}
+
+// ---------- Tutor IA ----------
+
+// Cada pedido de ajuda do aluno a um jogo da atividade, com a resposta do tutor. Serve para o
+// histórico da conversa (o servidor monta o contexto a partir daqui, não do navegador), para o
+// desconto no desempenho e para o instrutor acompanhar.
+model TutorMessage {
+  id         String   @id @default(uuid()) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  activityId String   @map("activity_id") @db.Uuid
+  blockId    String   @map("block_id")
+  gameType   GameType @map("game_type")
+  item       Int? // pergunta/palavra/frase (null = o jogo todo, no caça-palavras)
+  itemLabel  String   @map("item_label") // "Pergunta 3 de 8"
+  trigger    String // BUTTON (pediu ajuda) | IDLE (aceitou a oferta) | MESSAGE (escreveu)
+  question   String? // o que o aluno escreveu
+  reply      String
+  // a resposta da IA entregava a resposta do exercício e foi trocada por uma pista genérica
+  filtered   Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  student  User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, activityId, blockId])
+  @@index([activityId])
+  @@map("tutor_messages")
+}

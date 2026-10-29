@@ -1,0 +1,45 @@
+{
+  "title": "Exercício surpresa: informática básica",
+  "questions": [
+    {
+      "text": "O computador recebe dados, processa, guarda e mostra o resultado. Mostrar o resultado na tela é a etapa de:",
+      "options": ["Entrada", "Processamento", "Saída", "Armazenamento"],
+      "correct": 2
+    },
+    {
+      "text": "Qual peça é o \"cérebro\" do computador, a que faz as contas e executa os programas?",
+      "options": ["O processador (CPU)", "O monitor", "O mouse", "O pen drive"],
+      "correct": 0
+    },
+    {
+      "text": "Qual tipo de computador é enorme, fica numa sala especial e atende milhares de pessoas ao mesmo tempo, como nos bancos?",
+      "options": ["Notebook", "Tablet", "Mainframe", "Smartphone"],
+      "correct": 2
+    },
+    {
+      "text": "O smartphone também é um computador?",
+      "options": [
+        "Não, é só um telefone",
+        "Sim: recebe dados, processa, guarda e mostra resultados",
+        "Só quando está no carregador",
+        "Só se tiver teclado físico"
+      ],
+      "correct": 1
+    },
+    {
+      "text": "Qual a diferença entre a memória RAM e o armazenamento (HD ou SSD)?",
+      "options": [
+        "A RAM guarda os arquivos para sempre",
+        "A RAM é temporária (apaga ao desligar) e o HD ou SSD guarda os arquivos",
+        "São a mesma coisa",
+        "O HD só funciona com internet"
+      ],
+      "correct": 1
+    },
+    {
+      "text": "Qual destes é um dispositivo de entrada E de saída ao mesmo tempo?",
+      "options": ["Tela sensível ao toque (touchscreen)", "Mouse", "Caixa de som", "Impressora"],
+      "correct": 0
+    }
+  ]
+}

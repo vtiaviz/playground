@@ -1,0 +1,40 @@
+{
+  "title": "Prova de informática básica",
+  "questions": [
+    {
+      "text": "Qual destes é um dispositivo de ENTRADA?",
+      "options": ["Monitor", "Teclado", "Impressora", "Caixa de som"],
+      "correct": 1
+    },
+    {
+      "text": "Para guardar um arquivo no computador e não perder o que foi feito, você deve:",
+      "options": ["Salvar", "Minimizar", "Fechar sem salvar", "Desligar o monitor"],
+      "correct": 0
+    },
+    {
+      "text": "Qual atalho de teclado COPIA o texto selecionado?",
+      "options": ["Ctrl + V", "Ctrl + Z", "Ctrl + C", "Ctrl + P"],
+      "correct": 2
+    },
+    {
+      "text": "Onde ficam o processador, a memória e o HD (ou SSD) de um computador de mesa?",
+      "options": ["No monitor", "No mouse", "No gabinete", "No teclado"],
+      "correct": 2
+    },
+    {
+      "text": "Qual cabo liga o computador à rede da empresa (internet cabeada)?",
+      "options": ["Cabo de rede (RJ45)", "Cabo VGA", "Cabo P2", "Cabo de força"],
+      "correct": 0
+    },
+    {
+      "text": "Uma senha segura deve:",
+      "options": [
+        "Ser a sua data de nascimento",
+        "Ser igual em todos os sites",
+        "Ser contada para os colegas",
+        "Misturar letras, números e símbolos"
+      ],
+      "correct": 3
+    }
+  ]
+}

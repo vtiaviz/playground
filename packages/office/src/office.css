@@ -1,0 +1,2001 @@
+.office-game {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.office-hud {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.office-spacer {
+  flex: 1;
+}
+.office-room {
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--navy, #012f67);
+  color: #fff;
+}
+.office-hud button[aria-pressed='true'] {
+  outline: 2px solid var(--amber, #ffae00);
+}
+.office-hud kbd,
+.office-help kbd {
+  font-family: var(--mono, monospace);
+  font-size: 0.75em;
+  padding: 0 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.8;
+}
+.office-stage {
+  position: relative;
+}
+.office-canvas {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: calc(100vh - 220px);
+  background: #1b2230;
+  border-radius: var(--r-md, 10px);
+  overflow: hidden;
+}
+.office-canvas:focus-visible {
+  outline: 3px solid var(--amber, #ffae00);
+  outline-offset: 2px;
+}
+.office-canvas canvas {
+  image-rendering: pixelated;
+}
+.office-help {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+/* setas na tela: só em telas de toque */
+.office-dpad {
+  display: none;
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  grid-template-areas: '. up .' 'left . right' '. down .';
+  grid-template-columns: repeat(3, 48px);
+  grid-template-rows: repeat(3, 48px);
+  gap: 4px;
+}
+.office-dpad button {
+  border-radius: 10px;
+  border: 0;
+  background: rgba(1, 47, 103, 0.75);
+  color: #fff;
+  font-size: 1.1rem;
+  touch-action: none;
+  user-select: none;
+}
+@media (pointer: coarse) {
+  .office-dpad {
+    display: grid;
+  }
+}
+
+/* ---------- missão: HUD, diálogos e tela de jogo ---------- */
+.office-xp {
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--amber, #ffae00);
+  color: #2a1a00;
+}
+.office-objective {
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--r-md, 10px);
+  background: var(--info-bg, #e3eeff);
+  color: var(--info, #0b4fa8);
+}
+.office-objective.done {
+  background: var(--ok-bg, #e4f5ec);
+  color: var(--ok, #17794a);
+}
+.office-sprite {
+  display: inline-block;
+  background-repeat: no-repeat;
+}
+.office-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.office-dialog {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 1rem;
+  border: 3px solid #1c1626;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #1c1626;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+  font-size: 1.05rem;
+}
+.office-dialog-portrait {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 84px;
+  border-radius: 8px;
+  background: #e8dcc4;
+  overflow: hidden;
+}
+.office-dialog-body {
+  flex: 1;
+  min-width: 0;
+}
+.office-dialog-body p {
+  margin: 0.2rem 0 0;
+  line-height: 1.4;
+}
+.office-dialog-name {
+  color: #8a3b12;
+}
+.office-xp-badge {
+  display: inline-block;
+  margin-top: 0.45rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--amber, #ffae00);
+  color: #2a1a00;
+  font-weight: 800;
+  animation: office-pop 500ms ease-out;
+}
+@keyframes office-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.office-dialog button,
+.office-balloon button {
+  flex: none;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 2px solid #1c1626;
+  background: #fff;
+  color: #1c1626;
+  cursor: pointer;
+}
+.office-dialog button:focus-visible,
+.office-balloon button:focus-visible,
+.office-pc-winbtn:focus-visible {
+  outline: 3px solid var(--amber, #ffae00);
+  outline-offset: 2px;
+}
+.office-balloon {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 18px));
+  width: min(320px, 80%);
+  padding: 0.7rem 0.9rem;
+  border: 3px solid #1c1626;
+  border-radius: 16px;
+  background: #fff;
+  color: #1c1626;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.3);
+}
+.office-balloon::after {
+  /* bolinhas de balão de pensamento */
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  width: 12px;
+  height: 12px;
+  border: 3px solid #1c1626;
+  border-radius: 50%;
+  background: #fff;
+}
+.office-balloon p {
+  margin: 0 0 0.6rem;
+  line-height: 1.35;
+}
+.office-balloon-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.office-balloon-actions button:first-child,
+.office-primary {
+  background: var(--dot-green, #a0c330) !important;
+}
+/* ---------- modal "PC do chefe": o minijogo roda numa janela dentro de um monitor ---------- */
+.office-pc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 12, 22, 0.78);
+  animation: office-fade 200ms ease-out;
+}
+@keyframes office-fade {
+  from {
+    opacity: 0;
+  }
+}
+.office-pc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(1100px, 100%);
+  height: min(820px, calc(100vh - 32px));
+  height: min(820px, calc(100dvh - 32px));
+  animation: office-power-on 420ms ease-out;
+}
+@keyframes office-power-on {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+    filter: brightness(2.2);
+  }
+}
+.office-pc-bezel {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 0;
+  border-radius: 18px;
+  background: linear-gradient(#2c313b, #1b1f27);
+  box-shadow: 0 0 0 2px #0d0f14, 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.office-pc-screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, #3f86c7, #154a7f 55%, #0b2c52);
+  box-shadow: inset 0 0 0 2px #05070b;
+}
+.office-pc-desktop {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 14px;
+}
+.office-pc-window {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface, #fff);
+  color: var(--text, #0d1b36);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.office-pc-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.75rem;
+  background: #e9edf3;
+  color: #0d1b36;
+  border-bottom: 1px solid #c9d1dd;
+  font-size: 0.92rem;
+}
+.office-pc-titlebar strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.office-pc-subtitle {
+  color: #556480;
+  white-space: nowrap;
+}
+.office-pc-winbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #b9c6dc;
+  border-radius: 6px;
+  background: #fff;
+  color: #0d1b36;
+  cursor: pointer;
+}
+.office-pc-winbtn:focus-visible {
+  outline: 3px solid var(--amber, #ffae00);
+  outline-offset: 1px;
+}
+.office-pc-close:hover {
+  background: #d9342b;
+  border-color: #d9342b;
+  color: #fff;
+}
+.office-pc-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem;
+}
+.office-pc-taskbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.7rem;
+  background: rgba(10, 18, 34, 0.88);
+  color: #e7eefc;
+  font-size: 0.82rem;
+}
+.office-pc-start {
+  font-size: 1.1rem;
+  color: #7fb2ff;
+}
+.office-pc-task {
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  opacity: 0.75;
+}
+.office-pc-task.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 -2px 0 #7fb2ff;
+  opacity: 1;
+}
+.office-pc-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  height: 30px;
+  color: #8d96a6;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.office-pc-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #59d18f;
+  box-shadow: 0 0 6px #59d18f;
+}
+.office-pc-neck {
+  width: 70px;
+  height: 36px;
+  background: linear-gradient(90deg, #1b1f27, #343a46, #1b1f27);
+}
+.office-pc-base {
+  width: 240px;
+  height: 14px;
+  border-radius: 10px 10px 4px 4px;
+  background: linear-gradient(#3a404c, #1b1f27);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+/* tela cheia: some o pé do monitor e a moldura fica fina; o jogo ganha a tela toda */
+.office-pc-modal.is-fullscreen {
+  padding: 0;
+  background: #05070b;
+}
+.office-pc-modal.is-fullscreen .office-pc {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  animation: none;
+}
+.office-pc-modal.is-fullscreen .office-pc-bezel {
+  border-radius: 0;
+  padding: 6px 6px 0;
+}
+.office-pc-modal.is-fullscreen .office-pc-brand {
+  height: 20px;
+}
+.office-pc-modal.is-fullscreen .office-pc-neck,
+.office-pc-modal.is-fullscreen .office-pc-base {
+  display: none;
+}
+@media (max-width: 640px) {
+  .office-pc-modal {
+    padding: 6px;
+  }
+  .office-pc-neck,
+  .office-pc-base,
+  .office-pc-subtitle,
+  .office-pc-winbtn-label,
+  .office-pc-task:not(.is-active) {
+    display: none;
+  }
+  .office-pc-bezel {
+    padding: 8px 8px 0;
+  }
+  .office-pc-desktop {
+    padding: 6px;
+  }
+}
+
+/* ---------- missão 2: tempo, avisos e o computador da mesa ---------- */
+.office-timer {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #1c1626;
+  color: #fff;
+}
+.office-timer.is-low {
+  background: #c53030;
+  animation: office-pulse 1s ease-in-out infinite;
+}
+@keyframes office-pulse {
+  50% {
+    transform: scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .office-timer.is-low {
+    animation: none;
+  }
+}
+.office-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 0.5rem 1rem;
+  border: 3px solid #1c1626;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #1c1626;
+  font-weight: 700;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.office-desk-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 12, 20, 0.72);
+}
+.office-desk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(980px, 100%);
+  max-height: 100%;
+  padding: 0.8rem;
+  border: 3px solid #1c1626;
+  border-radius: 14px;
+  background: #fffaf0;
+  color: #1c1626;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.4);
+  outline: none;
+}
+.office-desk-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.office-desk-model {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #e8dcc4;
+  font-size: 0.9rem;
+}
+.office-desk-tip {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.office-desk-scene {
+  display: block;
+  width: 100%;
+  /* a cena inteira cabe na tela: 240×150 = 1,6 de proporção */
+  max-height: calc(100vh - 230px);
+  max-height: calc(100dvh - 230px);
+  aspect-ratio: 240 / 150;
+  margin: 0 auto;
+  border: 3px solid #1c1626;
+  border-radius: 8px;
+  background: #dfe6e9;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.office-hot {
+  cursor: inherit;
+  outline: none;
+}
+.office-hot:focus-visible {
+  outline: 1px dashed #ffae00;
+}
+.office-svg-text {
+  font-family: var(--mono, ui-monospace, monospace);
+  pointer-events: none;
+}
+.office-desk-sign {
+  animation: office-drop 0.35s ease-out;
+}
+@keyframes office-drop {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+}
+.office-desk-msg {
+  margin: 0;
+  min-height: 1.5em;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  background: #f1ece0;
+  font-weight: 600;
+}
+.office-desk-msg.tone-ok {
+  background: #e4f5ec;
+  color: #17794a;
+}
+.office-desk-msg.tone-warn {
+  background: #fff1d6;
+  color: #8a4b00;
+}
+.office-desk-msg.tone-info {
+  background: #e3eeff;
+  color: #0b4fa8;
+}
+.office-desk-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.office-desk-actions kbd {
+  font-family: var(--mono, monospace);
+  font-size: 0.75em;
+  padding: 0 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.7;
+}
+.office-xp-badge.is-loss {
+  background: #c53030;
+  color: #fff;
+}
+
+/* ---------- missão 3: montar o computador (mesa + caixa, depois os cabos) ---------- */
+.office-mont-card {
+  width: min(1180px, 100%);
+}
+.office-mont-body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(220px, 1.2fr);
+  gap: 0.6rem;
+  align-items: start;
+  min-height: 0;
+}
+@media (max-width: 760px) {
+  .office-mont-body {
+    grid-template-columns: 1fr;
+  }
+}
+.office-mont-scene {
+  max-height: calc(100vh - 250px);
+  max-height: calc(100dvh - 250px);
+  touch-action: none;
+}
+.office-mont-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 3px solid #1c1626;
+  border-radius: 8px;
+  background: #f1ece0;
+  max-height: calc(100vh - 250px);
+  max-height: calc(100dvh - 250px);
+  overflow: auto;
+}
+.office-mont-side h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.office-mont-help {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+/* a caixa no estilo "mochila" de RPG: quadrados escuros com a peça dentro */
+.office-bag {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: 8px;
+  background: #5a3a1c;
+  box-shadow: inset 0 0 0 3px #3b2410;
+}
+.office-bag-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 4px;
+  border: 3px solid #1c1626;
+  border-radius: 6px;
+  background: #2c2219;
+  box-shadow: inset 0 0 0 2px #46362a;
+  color: #f4ead8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  touch-action: none;
+  user-select: none;
+}
+.office-bag-slot svg {
+  width: 70%;
+  height: auto;
+}
+.office-bag-slot.is-selected {
+  outline: 3px solid #ffae00;
+  outline-offset: 1px;
+}
+.office-bag-slot:disabled {
+  opacity: 0.45;
+}
+.office-bag-empty {
+  font-size: 1.6rem;
+  color: #a0c330;
+}
+.office-mont-slot,
+.office-mont-port,
+.office-mont-cable {
+  outline: none;
+}
+.office-mont-slot:focus-visible rect,
+.office-mont-port:focus-visible rect {
+  stroke: #ffae00;
+  stroke-width: 0.8;
+}
+.office-mont-cable {
+  touch-action: none;
+}
+.office-drag-ghost {
+  position: fixed;
+  z-index: 1001;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, 0.45));
+}
+.office-plug-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.office-plug-zoom {
+  width: 100%;
+  height: auto;
+  border: 2px solid #1c1626;
+  border-radius: 6px;
+  touch-action: none;
+}
+.office-plug-status {
+  font-size: 0.85rem;
+}
+.office-plug-status.is-on {
+  color: #17794a;
+  font-weight: 700;
+}
+.office-cable-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.office-cable-list button {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  font-size: 0.85rem;
+}
+.office-cable-list button[aria-pressed='true'] {
+  outline: 2px solid #ffae00;
+}
+.office-mont-steps {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+.office-mont-steps li {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #e8dcc4;
+}
+.office-mont-steps li.is-current {
+  background: #ffae00;
+  font-weight: 700;
+}
+.office-mont-steps li.is-done {
+  background: #e4f5ec;
+  color: #17794a;
+}
+
+/* ---------- missão 4: modal em forma de quadro branco ---------- */
+.office-board-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 12, 22, 0.78);
+  animation: office-fade 200ms ease-out;
+}
+.office-board {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 100%);
+  height: min(820px, calc(100vh - 70px));
+  height: min(820px, calc(100dvh - 70px));
+  /* moldura de alumínio */
+  border: 12px solid #b9c0c8;
+  border-top-color: #d3d8de;
+  border-bottom-color: #9aa1ab;
+  border-radius: 6px;
+  outline: 3px solid #1c1626;
+  background: #fbfcfd;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.35), inset 0 0 40px rgba(170, 180, 195, 0.25);
+}
+.office-board-magnet {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #1c1626;
+  border-radius: 50%;
+  z-index: 1;
+}
+.office-board-magnet.is-tl {
+  top: 6px;
+  left: 6px;
+  background: #f54129;
+}
+.office-board-magnet.is-tr {
+  top: 6px;
+  right: 6px;
+  background: #0190ff;
+}
+.office-board-magnet.is-bl {
+  bottom: 6px;
+  left: 6px;
+  background: #a0c330;
+}
+.office-board-magnet.is-br {
+  bottom: 6px;
+  right: 6px;
+  background: #ffae00;
+}
+.office-board-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.6rem 1.6rem 0.4rem;
+  border-bottom: 2px dashed #c9d3e0;
+}
+.office-board-title {
+  color: #1f4fa0;
+  font-size: 1.25rem;
+  /* parece escrito com caneta de quadro */
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', var(--font, system-ui), sans-serif;
+}
+.office-board-sub {
+  color: #c0583a;
+  font-weight: 700;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', var(--font, system-ui), sans-serif;
+}
+.office-board-btn {
+  padding: 0.3rem 0.7rem;
+  border: 2px solid #1c1626;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+}
+.office-board-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.6rem 1.2rem 1rem;
+}
+.office-board-tray {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(1100px, 100%);
+  height: 18px;
+  margin-top: -2px;
+  padding: 0 40px;
+  border: 3px solid #1c1626;
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+  background: #9aa1ab;
+}
+.office-board-pen {
+  width: 46px;
+  height: 8px;
+  border: 2px solid #1c1626;
+  border-radius: 2px 6px 6px 2px;
+  background: #f4f4f4;
+  box-shadow: inset -12px 0 0 var(--pen);
+}
+.office-board-pen.is-blue {
+  --pen: #1f4fa0;
+}
+.office-board-pen.is-red {
+  --pen: #c0392b;
+}
+.office-board-pen.is-green {
+  --pen: #2f9e5a;
+}
+.office-board-pen.is-black {
+  --pen: #1c1626;
+}
+.office-board-eraser {
+  margin-left: auto;
+  width: 54px;
+  height: 12px;
+  border: 2px solid #1c1626;
+  border-radius: 3px;
+  background: linear-gradient(#3b4250 0 55%, #e8e2d4 55%);
+}
+.office-board-modal.is-fullscreen {
+  padding: 0;
+  background: #1b2230;
+}
+.office-board-modal.is-fullscreen .office-board {
+  width: 100%;
+  height: calc(100% - 18px);
+  border-radius: 0;
+}
+.office-board-modal.is-fullscreen .office-board-tray {
+  width: 100%;
+  border-radius: 0;
+}
+
+/* ------------------------------------------------------------ missão 5: tablet da prova */
+.office-tablet-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 56px;
+  overflow: hidden;
+  background: rgba(8, 12, 22, 0.78);
+  animation: office-fade 200ms ease-out;
+}
+.office-tablet {
+  position: relative;
+  width: min(1040px, 100%);
+  height: min(740px, calc(100vh - 32px));
+  height: min(740px, calc(100dvh - 32px));
+}
+/* contorno escuro seguindo os cantos em degrau (pixel art) */
+.office-tablet-frame {
+  height: 100%;
+  filter: drop-shadow(3px 0 0 #1c1626) drop-shadow(-3px 0 0 #1c1626) drop-shadow(0 3px 0 #1c1626)
+    drop-shadow(0 -3px 0 #1c1626) drop-shadow(0 10px 0 rgba(0, 0, 0, 0.35));
+}
+.office-tablet-body {
+  position: relative;
+  display: flex;
+  height: 100%;
+  padding: 26px 40px;
+  background: #2b2f37;
+  box-shadow: inset 0 4px 0 #454b57, inset 0 -4px 0 #1d2027;
+  clip-path: polygon(
+    0 18px, 6px 18px, 6px 12px, 12px 12px, 12px 6px, 18px 6px, 18px 0,
+    calc(100% - 18px) 0, calc(100% - 18px) 6px, calc(100% - 12px) 6px, calc(100% - 12px) 12px, calc(100% - 6px) 12px, calc(100% - 6px) 18px, 100% 18px,
+    100% calc(100% - 18px), calc(100% - 6px) calc(100% - 18px), calc(100% - 6px) calc(100% - 12px), calc(100% - 12px) calc(100% - 12px), calc(100% - 12px) calc(100% - 6px), calc(100% - 18px) calc(100% - 6px), calc(100% - 18px) 100%,
+    18px 100%, 18px calc(100% - 6px), 12px calc(100% - 6px), 12px calc(100% - 12px), 6px calc(100% - 12px), 6px calc(100% - 18px), 0 calc(100% - 18px)
+  );
+}
+.office-tablet-camera {
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  background: #0b0c0e;
+  box-shadow: inset 2px 2px 0 #3b5b8a;
+}
+.office-tablet-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  border: 3px solid #11131a;
+  background: #f4f7fb;
+}
+.office-tablet-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  background: #1f2a44;
+  color: #fff;
+  font-size: 0.85rem;
+}
+.office-tablet-clock {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.office-tablet-app {
+  font-weight: 700;
+}
+.office-tablet-icons {
+  letter-spacing: 2px;
+}
+.office-tablet-btn {
+  padding: 0.2rem 0.6rem;
+  border: 2px solid #0b0c0e;
+  border-radius: 6px;
+  background: #fff;
+  color: #1c1626;
+  font-weight: 700;
+}
+.office-tablet-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.6rem 1rem 1rem;
+}
+.office-tablet-hand {
+  position: absolute;
+  top: 46%;
+  z-index: 1;
+  width: 64px;
+  height: 104px;
+  pointer-events: none;
+}
+.office-tablet-hand.is-left {
+  left: -40px;
+}
+.office-tablet-hand.is-right {
+  right: -40px;
+}
+.office-tablet-modal.is-fullscreen {
+  padding: 0 44px;
+  background: #1b2230;
+}
+.office-tablet-modal.is-fullscreen .office-tablet {
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 640px) {
+  .office-tablet-modal {
+    padding: 10px 24px;
+  }
+  .office-tablet-body {
+    padding: 18px 16px;
+  }
+  .office-tablet-hand {
+    width: 40px;
+    height: 65px;
+  }
+  .office-tablet-hand.is-left {
+    left: -24px;
+  }
+  .office-tablet-hand.is-right {
+    right: -24px;
+  }
+}
+
+/* ------------------------------------------------------------ fase 2, missão 5: celular do ESTAGIÁRIO */
+.office-phone-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px 0;
+  overflow: hidden;
+  background: rgba(8, 12, 22, 0.78);
+  animation: office-fade 200ms ease-out;
+}
+.office-phone-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.office-phone {
+  position: relative;
+  width: min(380px, 100%);
+  height: min(760px, calc(100vh - 70px));
+  height: min(760px, calc(100dvh - 70px));
+  margin-bottom: -40px;
+  animation: office-phone-up 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+@keyframes office-phone-up {
+  from {
+    transform: translateY(60%);
+  }
+}
+.office-phone-frame {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  filter: drop-shadow(3px 0 0 #1c1626) drop-shadow(-3px 0 0 #1c1626) drop-shadow(0 3px 0 #1c1626)
+    drop-shadow(0 -3px 0 #1c1626) drop-shadow(0 10px 0 rgba(0, 0, 0, 0.35));
+}
+.office-phone-body {
+  position: relative;
+  display: flex;
+  height: 100%;
+  padding: 30px 12px 34px;
+  background: #23262e;
+  box-shadow: inset 0 4px 0 #3d424d, inset 0 -4px 0 #17191f;
+  clip-path: polygon(
+    0 24px, 6px 24px, 6px 12px, 12px 12px, 12px 6px, 24px 6px, 24px 0,
+    calc(100% - 24px) 0, calc(100% - 24px) 6px, calc(100% - 12px) 6px, calc(100% - 12px) 12px, calc(100% - 6px) 12px, calc(100% - 6px) 24px, 100% 24px,
+    100% calc(100% - 24px), calc(100% - 6px) calc(100% - 24px), calc(100% - 6px) calc(100% - 12px), calc(100% - 12px) calc(100% - 12px), calc(100% - 12px) calc(100% - 6px), calc(100% - 24px) calc(100% - 6px), calc(100% - 24px) 100%,
+    24px 100%, 24px calc(100% - 6px), 12px calc(100% - 6px), 12px calc(100% - 12px), 6px calc(100% - 12px), 6px calc(100% - 24px), 0 calc(100% - 24px)
+  );
+}
+.office-phone-speaker {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 56px;
+  height: 6px;
+  margin-left: -28px;
+  background: #0b0c0e;
+  box-shadow: 40px 0 0 -1px #0b0c0e, 40px 0 0 0 #3b5b8a;
+}
+.office-phone-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 3px solid #11131a;
+  background: #ece5d8;
+}
+.office-phone-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  background: #0b5547;
+  color: #fff;
+  font-size: 0.78rem;
+}
+.office-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.6rem;
+  background: #0f6e5c;
+  color: #fff;
+}
+.office-chat-head.is-site {
+  background: #1f2a44;
+}
+.office-chat-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 2px solid #0b0c0e;
+  border-radius: 50%;
+  background: #f0a14a;
+  color: #1c1626;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.office-chat-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.office-chat-who strong {
+  overflow: hidden;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.office-chat-who small {
+  opacity: 0.85;
+  font-size: 0.75rem;
+}
+.office-chat-back {
+  padding: 0 0.4rem;
+  border: 0;
+  background: none;
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.office-chat-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.6rem 0.6rem 0.8rem;
+  background-color: #ece5d8;
+  background-image: radial-gradient(rgba(15, 110, 92, 0.09) 1.5px, transparent 1.6px);
+  background-size: 18px 18px;
+}
+.office-chat-day {
+  align-self: center;
+  margin: 0 0 0.2rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 6px;
+  background: #dbe8f0;
+  color: #44505c;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.office-chat-pair {
+  display: contents;
+}
+.office-chat-bubble {
+  position: relative;
+  max-width: 86%;
+  padding: 0.4rem 0.55rem 1.1rem;
+  border-radius: 10px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+  color: #1c1626;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  animation: office-chat-in 220ms ease-out;
+}
+@keyframes office-chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+.office-chat-bubble.is-in {
+  align-self: flex-start;
+  border-top-left-radius: 2px;
+  background: #fff;
+}
+.office-chat-bubble.is-out {
+  align-self: flex-end;
+  border-top-right-radius: 2px;
+  background: #d3f5c0;
+}
+.office-chat-bubble time {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.2rem;
+  color: #6b7480;
+  font-size: 0.66rem;
+}
+.office-chat-ticks {
+  color: #3a9ad9;
+  letter-spacing: -3px;
+}
+.office-chat-bubble.is-typing {
+  display: flex;
+  gap: 4px;
+  padding: 0.6rem 0.7rem;
+}
+.office-chat-bubble.is-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8a939e;
+  animation: office-chat-dot 900ms infinite ease-in-out;
+}
+.office-chat-bubble.is-typing span:nth-child(2) {
+  animation-delay: 150ms;
+}
+.office-chat-bubble.is-typing span:nth-child(3) {
+  animation-delay: 300ms;
+}
+@keyframes office-chat-dot {
+  40% {
+    transform: translateY(-4px);
+    opacity: 0.5;
+  }
+}
+.office-chat-bubble.is-link {
+  padding-top: 0.3rem;
+}
+.office-chat-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-bottom: 0.3rem;
+  padding: 0.45rem;
+  border: 2px solid #0f6e5c;
+  border-radius: 8px;
+  background: #e6f4ef;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.office-chat-link:not(:disabled) {
+  animation: office-chat-call 1.1s ease-in-out infinite;
+}
+@keyframes office-chat-call {
+  50% {
+    box-shadow: 0 0 0 4px rgba(15, 110, 92, 0.3);
+  }
+}
+.office-chat-link:hover:not(:disabled) {
+  background: #d3ece3;
+}
+.office-chat-link:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.office-chat-link strong {
+  display: block;
+  font-size: 0.86rem;
+}
+.office-chat-link small {
+  color: #4a5560;
+  font-size: 0.72rem;
+}
+.office-chat-link-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: #0f6e5c;
+  font-size: 1.2rem;
+}
+.office-chat-url {
+  color: #1d6fb8;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.office-chat-url em {
+  color: #6b7480;
+  font-style: normal;
+  text-decoration: none;
+}
+.office-chat-foot {
+  display: flex;
+  justify-content: center;
+  padding: 0.45rem 0.55rem;
+  background: #f2efe8;
+  border-top: 1px solid #d6cfc2;
+}
+.office-chat-input {
+  flex: 1;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #9aa3ad;
+  font-size: 0.85rem;
+}
+.office-phone-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.4rem 0.5rem 0.8rem;
+  background: #f4f7fb;
+}
+.office-phone-hand-back {
+  position: absolute;
+  bottom: -18px;
+  left: -96px;
+  z-index: 0;
+  width: 180px;
+  height: 204px;
+  pointer-events: none;
+}
+.office-phone-thumb {
+  position: absolute;
+  bottom: 148px;
+  left: -20px;
+  z-index: 2;
+  width: 48px;
+  height: 72px;
+  pointer-events: none;
+}
+.office-phone-fingers {
+  position: absolute;
+  bottom: 110px;
+  right: -14px;
+  z-index: 2;
+  width: 30px;
+  height: 100px;
+  pointer-events: none;
+}
+.office-phone-modal.is-fullscreen {
+  background: #1b2230;
+}
+@media (max-width: 640px) {
+  .office-phone-hand-back,
+  .office-phone-thumb,
+  .office-phone-fingers {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------ missão 6: painel do alarme */
+.office-alarm-modal,
+.office-summary-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 12, 22, 0.8);
+  animation: office-fade 200ms ease-out;
+}
+.office-alarm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(320px, 100%);
+  padding: 16px;
+  border: 4px solid #1c1626;
+  border-radius: 12px;
+  background: linear-gradient(#f2efe6, #d9d4c6);
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.35), inset 0 3px 0 #fff;
+}
+.office-alarm-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3b4250;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+}
+.office-alarm-led {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #1c1626;
+  border-radius: 50%;
+  background: #f54129;
+  animation: os-blink 1s steps(2, jump-none) infinite;
+}
+.office-alarm-display {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 3px solid #1c1626;
+  border-radius: 4px;
+  color: #7ee08a;
+  background: #13261a;
+  font-family: ui-monospace, 'Courier New', monospace;
+  font-weight: 700;
+}
+.office-alarm-display.is-bad {
+  color: #ff7b63;
+}
+.office-alarm-display strong {
+  min-height: 1.4em;
+  font-size: 1.3rem;
+  letter-spacing: 0.3em;
+}
+.office-alarm-keys {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.office-alarm-keys button {
+  padding: 12px 0;
+  border: 3px solid #1c1626;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 0 #8d949c;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.office-alarm-keys button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #8d949c;
+}
+.office-alarm-keys .is-ok {
+  background: #4ade80;
+  font-size: 0.85rem;
+}
+.office-alarm-keys .is-clear {
+  background: #ffd38a;
+}
+.office-alarm-cancel {
+  align-self: center;
+  padding: 0.3rem 0.8rem;
+  border: 2px solid #1c1626;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ fim da fase 1: resumo do dia */
+.office-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: min(640px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 1.2rem 1.4rem;
+  border: 4px solid #1c1626;
+  border-radius: 14px;
+  background: #fffaf0;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.35);
+}
+.office-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.office-summary-head h2 {
+  margin: 0;
+  color: #012f67;
+}
+.office-summary-kicker {
+  margin: 0;
+  color: #2f9e5a;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.85rem;
+}
+.office-summary-stars {
+  margin: 0.2rem 0 0;
+  color: #ffae00;
+  font-size: 1.6rem;
+  letter-spacing: 0.1em;
+  -webkit-text-stroke: 1px #1c1626;
+}
+.office-summary-stars span {
+  color: #d9d4c6;
+}
+.office-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.office-summary-table th,
+.office-summary-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 2px dashed #e4dccb;
+  text-align: left;
+}
+.office-summary-table th:nth-child(n + 3),
+.office-summary-table td:nth-child(n + 3) {
+  text-align: right;
+  white-space: nowrap;
+}
+.office-summary-table small {
+  display: block;
+  color: #b45309;
+}
+.office-summary-table .is-gain {
+  color: #1d7a46;
+  font-weight: 700;
+}
+.office-summary-table .is-loss {
+  color: #c0392b;
+  font-weight: 700;
+}
+.office-summary-total {
+  margin: 0;
+  font-size: 1.3rem;
+  text-align: right;
+}
+.office-summary-note {
+  margin: 0;
+}
+.office-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.office-summary-actions button {
+  padding: 0.45rem 0.9rem;
+  border: 2px solid #1c1626;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ fase 2, missão 1: levantamento dos computadores */
+.office-survey-card {
+  width: min(1080px, 100%);
+  overflow: auto;
+}
+.office-survey-summary {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border: 2px solid #1c1626;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 1.02rem;
+  line-height: 1.45;
+}
+.office-survey-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+}
+.office-survey-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.office-survey-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 80 / 56;
+  border: 3px solid #1c1626;
+  border-radius: 12px;
+  background:
+    linear-gradient(#e9e2d0 0 62%, #b98a5a 62% 64%, #a8743f 64%);
+  overflow: hidden;
+  user-select: none;
+}
+.office-survey-stage.is-target {
+  outline: 4px dashed #ffae00;
+  outline-offset: -8px;
+  cursor: copy;
+}
+.office-survey-stage img {
+  width: 92%;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.office-survey-placed {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  transform: translate(-50%, -50%) rotate(-6deg);
+  cursor: grab;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.4));
+}
+.office-survey-sheet {
+  padding: 0.5rem 0.6rem 0.6rem;
+  border: 2px dashed #9c8b6c;
+  border-radius: 10px;
+  background: #fbf6ea;
+}
+.office-survey-sheet-title {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #6b5a3c;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.office-survey-stickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.office-survey-pick {
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: none;
+  cursor: grab;
+  touch-action: none;
+}
+.office-survey-pick.is-picked {
+  border-color: #ffae00;
+  background: #fff1d6;
+}
+.office-survey-pick:focus-visible {
+  outline: 3px solid #0190ff;
+}
+.office-sticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  border: 2px solid #1c1626;
+  border-radius: 6px;
+  color: #fff;
+  font: 800 0.82rem/1 system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+.office-sticker-dot {
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+/* prancheta na mão do ESTAGIÁRIO */
+.office-clip-wrap {
+  position: relative;
+  padding: 0 26px 30px;
+}
+.office-clip {
+  position: relative;
+  padding: 26px 12px 14px;
+  border: 3px solid #1c1626;
+  border-radius: 12px;
+  background: #b7834f;
+  box-shadow: inset 0 -6px 0 #946238;
+}
+.office-clip-clamp {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 96px;
+  height: 30px;
+  transform: translateX(-50%);
+  border: 3px solid #1c1626;
+  border-radius: 8px 8px 4px 4px;
+  background: linear-gradient(#d8dde3, #9aa1ab);
+}
+.office-clip-paper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.7rem 0.6rem 0.6rem;
+  background: #fff repeating-linear-gradient(transparent 0 23px, #dbe7f5 23px 24px);
+  border: 2px solid #1c1626;
+  font-family: 'Segoe Print', 'Comic Sans MS', system-ui, sans-serif;
+}
+.office-clip-title {
+  font-size: 1rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+.office-clip-sub {
+  font-size: 0.78rem;
+  text-align: center;
+  color: #5d6676;
+}
+.office-clip-paper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.office-clip-paper th {
+  padding: 0.2rem 0.3rem;
+  border-bottom: 2px solid #1c1626;
+  font-size: 0.78rem;
+  text-align: left;
+}
+.office-clip-paper td {
+  padding: 0.1rem 0.2rem;
+  border-bottom: 1px solid #c7d3e2;
+  vertical-align: middle;
+}
+.office-clip-paper td:first-child {
+  width: 52%;
+  border-right: 1px solid #c7d3e2;
+}
+.office-clip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.3rem 0.35rem;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.office-clip-row:hover {
+  background: #fff6d6;
+}
+.office-clip-row:focus-visible {
+  outline: 3px solid #0190ff;
+}
+tr.is-marked .office-clip-row {
+  border-color: #f54129;
+  background: #fff1ee;
+}
+.office-clip-swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #1c1626;
+  border-radius: 3px;
+}
+.office-clip-tally {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.office-clip-tally line {
+  stroke: #233056;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+.office-clip-tally line.is-fresh {
+  stroke: #f54129;
+  stroke-width: 3;
+}
+.office-clip-empty {
+  color: #aab3c2;
+}
+.office-clip-hand {
+  position: absolute;
+  bottom: 0;
+  z-index: 1;
+  width: 56px;
+  height: 77px;
+  pointer-events: none;
+}
+.office-clip-hand.is-left {
+  left: 0;
+}
+.office-clip-hand.is-right {
+  right: 0;
+}
+@media (max-width: 760px) {
+  .office-survey-body {
+    grid-template-columns: 1fr;
+  }
+  .office-survey-summary {
+    font-size: 0.92rem;
+  }
+}
+
+/* ---------- fase 2, missão 3: placa encontrada em destaque e contador ---------- */
+.office-boards {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #1f7ab8;
+  color: #fff;
+}
+.office-boards.is-full {
+  background: var(--dot-green, #a0c330);
+  color: #1c1626;
+}
+.office-boards strong {
+  display: inline-block;
+  animation: office-pop 450ms ease-out;
+}
+.office-placa-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 12, 20, 0.6);
+  animation: office-fade 200ms ease-out;
+  cursor: pointer;
+}
+.office-placa-modal.is-leaving {
+  opacity: 0;
+  transition: opacity 260ms ease-in;
+}
+.office-placa-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: min(440px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 1rem 1.1rem 1.2rem;
+  border: 3px solid #1c1626;
+  border-radius: 16px;
+  background: #fffaf0;
+  color: #1c1626;
+  text-align: center;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.4);
+  outline: none;
+  cursor: default;
+  animation: office-placa-in 420ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.office-placa-modal.is-leaving .office-placa-card {
+  transform: scale(0.6) translateY(-40px);
+  transition: transform 260ms ease-in;
+}
+@keyframes office-placa-in {
+  from {
+    transform: scale(0.3) rotate(-8deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+.office-placa-found {
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.office-placa-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.8rem 0;
+  border-radius: 12px;
+  background: radial-gradient(circle, #fff3b0 0%, #ffd84d 45%, #f5b400 100%);
+}
+.office-placa-stage img {
+  width: min(320px, 80%);
+  height: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.25));
+}
+.office-placa-name {
+  margin: 0.2rem 0 0;
+  font-size: 1.5rem;
+}
+.office-placa-kind {
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+}
+.is-arduino .office-placa-kind {
+  background: #1f7ab8;
+}
+.is-raspberry .office-placa-kind {
+  background: #2e8b47;
+}
+.office-placa-what {
+  margin: 0.2rem 0 0;
+  line-height: 1.4;
+}
+.office-placa-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 0.4rem;
+}
+.office-placa-count {
+  font-weight: 800;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+.office-placa-ok {
+  font: inherit;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 2px solid #1c1626;
+  background: var(--dot-green, #a0c330);
+  color: #1c1626;
+  cursor: pointer;
+}
+.office-placa-ok:focus-visible {
+  outline: 3px solid var(--amber, #ffae00);
+  outline-offset: 2px;
+}
+.office-placa-timer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 6px;
+  width: 100%;
+  background: var(--amber, #ffae00);
+  transform-origin: left;
+  animation-name: office-placa-timer;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes office-placa-timer {
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .office-placa-card,
+  .office-boards strong {
+    animation: none;
+  }
+}
+
+/* ---------- fase 2, missão 4: relógio passando o tempo (o Marcos cochila) ---------- */
+.office-clock {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 1rem 0.45rem 0.55rem;
+  border: 3px solid #1c1626;
+  border-radius: 14px;
+  background: #1c1626;
+  color: #fff;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+  animation: office-pop 300ms ease-out;
+}
+.office-clock-face {
+  width: 56px;
+  height: 56px;
+}
+.office-clock-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.office-clock-text strong {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.office-clock-text span {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+/* fase 2, missão 5: botão do celular no topo (exercício ainda não entregue) */
+.office-hud .office-phone-hud {
+  background: #0f6e5c;
+  color: #fff;
+  font-weight: 700;
+  animation: office-chat-call 1.1s ease-in-out infinite;
+}

@@ -1,0 +1,265 @@
+/* Design system compartilhado com o caça-palavras, a forca e as palavras cruzadas:
+   degradê azul, texto branco, cartões translúcidos, botões brancos como as teclas da forca
+   (verde = certo, vermelho = errado) e pílula amarela para as ações. */
+
+.qz-root {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  background: linear-gradient(#4a7fb5, #5b9bd5);
+  color: #fff;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.qz-root > * {
+  width: 100%;
+  max-width: 640px;
+}
+
+.qz-compact {
+  min-height: 0;
+  border-radius: 12px;
+  padding: 16px 12px 20px;
+}
+
+.qz-root h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+/* ---------- cartão da pergunta ---------- */
+.qz-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.qz-question {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: pre-wrap;      /* enunciados com várias linhas (ex.: código) */
+  overflow-wrap: anywhere;
+}
+
+.qz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qz-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  color: #1f3a5c;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qz-option:hover:not(:disabled) { background: #e6f0fa; }
+.qz-option:focus-visible { outline: 3px solid #ffe08a; outline-offset: 2px; }
+.qz-option:disabled { cursor: default; }
+
+.qz-letter {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(31, 58, 92, 0.12);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.qz-text {
+  flex: 1;
+  padding-top: 3px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.qz-option.is-correct { background: #51cf66; color: #0b3d17; }
+.qz-option.is-correct .qz-letter { background: rgba(11, 61, 23, 0.18); }
+.qz-option.is-wrong { background: #ff6b6b; color: #fff; }
+.qz-option.is-wrong .qz-letter { background: rgba(255, 255, 255, 0.28); }
+.qz-option.is-dim { opacity: 0.7; }
+
+/* bloco de código do enunciado (linhas ```) */
+.qz-question pre.qz-pre {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(10, 30, 60, 0.35);
+  overflow-x: auto;
+  white-space: pre;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.qz-question pre.qz-pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.88rem;
+  white-space: pre;
+}
+
+/* trechos `em crases` */
+.qz-question code,
+.qz-text code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+.qz-question code { background: rgba(255, 255, 255, 0.22); }
+.qz-text code { background: rgba(31, 58, 92, 0.1); }
+.qz-option.is-wrong .qz-text code { background: rgba(255, 255, 255, 0.25); }
+
+/* ---------- feedback ---------- */
+.qz-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  min-height: 2.8em;           /* reserva o espaço: o layout não "pula" ao responder */
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-align: center;
+  visibility: hidden;
+}
+.qz-feedback.is-correct { visibility: visible; background: rgba(81, 207, 102, 0.32); }
+.qz-feedback.is-wrong { visibility: visible; background: rgba(255, 107, 107, 0.34); }
+
+/* ---------- botões de ação (pílula amarela) ---------- */
+.qz-root > .qz-btn { width: auto; }
+.qz-btn {
+  padding: 12px 26px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffe08a;
+  color: #3b2f00;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.qz-btn:hover { background: #ffd95e; }
+.qz-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* texto só para leitores de tela */
+.qz-sr,
+.qz-sr-letter {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- topo, progresso e cartões do jogo ---------- */
+.qz-hud {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.qz-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+.qz-progress > div {
+  height: 100%;
+  border-radius: inherit;
+  background: #ffe08a;
+  transition: width 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qz-progress > div { transition: none; }
+}
+
+.qz-panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  text-align: center;
+}
+.qz-panel p { margin: 0; }
+.qz-rules { margin: 0; padding-left: 1.2rem; text-align: left; }
+
+/* ---------- resultado ---------- */
+.qz-stars {
+  font-size: 2.6rem;
+  line-height: 1;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.35);
+}
+.qz-stars .on { color: #ffd43b; }
+
+.qz-message { font-weight: 600; }
+.qz-total { font-size: 1.1rem; }
+.qz-total strong { font-size: 2rem; }
+.qz-ref { font-size: 0.85rem; opacity: 0.85; }
+
+.qz-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.qz-review li {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.qz-review li.is-correct { box-shadow: inset 0 0 0 2px rgba(81, 207, 102, 0.7); }
+.qz-review li.is-wrong { box-shadow: inset 0 0 0 2px rgba(255, 107, 107, 0.8); }
+
+.qz-mark { flex: none; font-weight: 700; }
+.qz-review li.is-correct .qz-mark { color: #8ff0a4; }
+.qz-review li.is-wrong .qz-mark { color: #ffb4b4; }
+
+.qz-review-q { font-weight: 600; overflow-wrap: anywhere; }
+.qz-review-a { font-size: 0.9rem; opacity: 0.95; overflow-wrap: anywhere; }
+.qz-review code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}

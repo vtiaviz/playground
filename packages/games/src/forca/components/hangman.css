@@ -1,0 +1,129 @@
+/* Base visual do jogo (fundo azul, como no caça-palavras) */
+.hg-root {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  background: linear-gradient(#4a7fb5, #5b9bd5);
+  color: #fff;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ---------- boneco ---------- */
+.hg-figure {
+  width: min(190px, 48vw);
+  height: auto;
+}
+
+.hg-figure line,
+.hg-figure circle {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.hg-gallows line {
+  stroke-width: 6;
+  opacity: 0.85;
+}
+
+.hg-body > * {
+  stroke: #ffe08a;
+}
+
+/* a parte recém-desenhada "aparece" com uma animação curta */
+.hg-body > :last-child {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hg-pop 0.3s ease-out;
+}
+
+@keyframes hg-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hg-body > :last-child { animation: none; }
+}
+
+/* ---------- palavra ---------- */
+/* container-type: as letras encolhem para a palavra mais longa caber na largura */
+.hg-word {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 28px;
+}
+
+.hg-group {
+  display: flex;
+  gap: 6px;
+}
+
+.hg-cell {
+  --w: min(2.4rem, calc((100cqw - (var(--n) - 1) * 6px) / var(--n)));
+  display: grid;
+  place-items: end center;
+  width: var(--w);
+  height: calc(var(--w) * 1.35);
+  border-bottom: 3px solid #fff;
+  font-size: calc(var(--w) * 0.9);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hg-sep {
+  width: calc(var(--w) * 0.6);
+  border-bottom-color: transparent;
+}
+
+.hg-missed {
+  color: #ffb4b4;
+  border-bottom-color: #ffb4b4;
+}
+
+/* ---------- teclado ---------- */
+.hg-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+}
+
+.hg-krow {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.hg-key {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 48px;
+  height: 46px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f3a5c;
+  font: inherit;
+  font-weight: 700;
+  font-size: clamp(0.9rem, 4vw, 1.2rem);
+  cursor: pointer;
+}
+
+.hg-key:hover:not(:disabled) { background: #e6f0fa; }
+.hg-key:focus-visible { outline: 3px solid #ffe08a; outline-offset: 2px; }
+.hg-key:disabled { cursor: default; }
+.hg-key:disabled:not(.is-right):not(.is-wrong) { opacity: 0.5; }
+
+.hg-key.is-right { background: #51cf66; color: #0b3d17; }
+.hg-key.is-wrong { background: #ff6b6b; color: #fff; opacity: 0.75; }

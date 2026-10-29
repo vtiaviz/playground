@@ -1,0 +1,37 @@
+{
+  "name": "@playground/games",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./validate": "./src/validate.ts",
+    "./ai": "./src/ai/index.ts",
+    "./adaptive": "./src/adaptive.ts",
+    "./tutor": "./src/tutor.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "tsx scripts/cruzadas-check-logic.ts && tsx scripts/forca-check-logic.ts && tsx scripts/quiz-check-logic.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "jsdom": "^26.1.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^8.3.0",
+    "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "lz-string": "^1.5.0"
+  }
+}

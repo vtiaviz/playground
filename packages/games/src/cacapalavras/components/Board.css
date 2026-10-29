@@ -1,0 +1,41 @@
+/* O wrapper é o "container" usado pelas unidades cqw (tamanho da fonte proporcional à grade) */
+.board-wrap {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.board {
+  --n: 10;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  aspect-ratio: 1;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+
+  /* essencial no celular: o arrasto não pode rolar a página */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cell {
+  display: grid;
+  place-items: center;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  color: #333;
+  font-size: calc(100cqw / var(--n) * 0.5);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

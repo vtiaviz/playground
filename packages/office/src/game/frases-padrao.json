@@ -1,0 +1,90 @@
+{
+ "title": "Frases da reunião: informática básica",
+ "sentences": [
+  {
+   "segments": [
+    "O ",
+    " serve para mover a setinha na tela e clicar."
+   ],
+   "answers": [
+    "mouse"
+   ],
+   "explanation": "O mouse é um periférico de entrada."
+  },
+  {
+   "segments": [
+    "O ",
+    " é usado para digitar textos e números."
+   ],
+   "answers": [
+    "teclado"
+   ],
+   "explanation": ""
+  },
+  {
+   "segments": [
+    "O ",
+    " mostra as imagens e os textos do computador."
+   ],
+   "answers": [
+    "monitor"
+   ],
+   "explanation": "O monitor é um periférico de saída."
+  },
+  {
+   "segments": [
+    "O ",
+    " guarda as peças principais, como a placa-mãe e o processador."
+   ],
+   "answers": [
+    "gabinete"
+   ],
+   "explanation": ""
+  },
+  {
+   "segments": [
+    "A ",
+    " coloca no papel o que está na tela."
+   ],
+   "answers": [
+    "impressora"
+   ],
+   "explanation": ""
+  },
+  {
+   "segments": [
+    "Antes de fechar um documento, é preciso ",
+    " o arquivo."
+   ],
+   "answers": [
+    "salvar"
+   ],
+   "explanation": "Quem não salva perde o trabalho se faltar energia."
+  },
+  {
+   "segments": [
+    "Para acessar a internet, o computador precisa estar ligado à ",
+    "."
+   ],
+   "answers": [
+    "rede"
+   ],
+   "explanation": ""
+  },
+  {
+   "segments": [
+    "Uma cópia extra dos arquivos importantes se chama ",
+    "."
+   ],
+   "answers": [
+    "backup"
+   ],
+   "explanation": ""
+  }
+ ],
+ "decoys": [
+  "scanner",
+  "janela",
+  "caneta"
+ ]
+}
