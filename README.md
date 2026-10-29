@@ -527,6 +527,7 @@ React abre a tarefa, e a nota vai para a API como nos outros jogos.
       tests/fim-dia2.test.ts     dispensa do chefe, saída para a calçada e o resumo das 5 missões do 2º dia
       tests/pecas.test.ts        lista com 8 peças e as parecidas (desenho próprio), adesivos, onde as peças caem e a conferência
       tests/missao-f3m2.test.ts  cruzadas de exemplo da Rita, a corrida do RH até a porta da Copa, bebedouro e o canto da Rita
+      tests/montar-pc.test.ts    pedidos dos 3 computadores, ordem de encaixe, cabos de energia e SATA, ligar e as caixas na TI
 
 - **Arte própria.** Tudo é pixel art desenhada pelo `scripts/gerar-arte.py` (tiles de 32 px, 1 pixel de arte = 2 px).
   As imagens de referência (planta do escritório e folhas de personagens) serviram só de inspiração para a disposição
@@ -899,6 +900,32 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
 - **Para testar:** `?fase=3&missao=2` começa direto nesta missão (a das peças conta como feita). No componente:
   `<OfficeGame fase={3} startAt={2} ritaCrossword={...} />`.
 
+### Missão 3: os 3 computadores do Marcos (+100 XP)
+
+1. Depois da água, o ESTAGIÁRIO sai rapidinho da Copa (*"antes que apareça mais alguma palavra-cruzada…"*). Logo o
+   **Marcos** chama de novo na Sala de TI.
+2. Lá, ele explica em três falas curtas e **3 caixas** aparecem no chão da sala, cada uma com um **!**: o computador do
+   **estudante** (i3, 8 GB, HD 512 GB), o **gamer** (i7, 32 GB, SSD 512 GB, placa de vídeo, fonte 500 W, gabinete
+   gamer) e o do **escritório** (i5, 16 GB, SSD 256 GB + HD 512 GB). Os três também levam placa-mãe, cooler e fonte
+   (350 W e 400 W nos que não são gamer).
+3. Chegando perto de uma caixa abre a **mesa de montagem**: a bancada com o monitor à esquerda e, à direita, a caixa em
+   **quadradinhos** (estilo mochila) só com as peças daquele computador.
+4. **Arrastar** cada peça até o lugar dela: primeiro o gabinete na mesa; depois a placa-mãe; o processador no soquete; o
+   cooler em cima do processador; as memórias nos slots; a placa de vídeo no slot PCI Express; a fonte embaixo; o HD e
+   o SSD nas baias da frente. Peça solta no lugar errado volta para a caixa, com uma dica de onde ela vai.
+5. **Cabos:** cada porta aparece como uma bolinha colorida (com legenda). Arrastar de uma até a outra: energia da
+   placa-mãe (24 pinos), energia SATA da fonte até o HD/SSD, dados SATA da placa-mãe até o HD/SSD e, no gamer, a
+   energia da placa de vídeo. Cabo de outro tipo não encaixa, e aparece a explicação.
+6. **⏻ Ligar o computador** (ou o botão do gabinete): faltando peça ou cabo, ele não liga e diz o que falta. Tudo certo
+   → o LED acende e a **tela de inicialização** aparece no monitor → **Pronto ✓**. Fechar no meio guarda a montagem.
+7. Os 3 ligados (contador **🖥️ N|3** no topo) → o Marcos vem até o ESTAGIÁRIO, **+100 XP**, e os dois comemoram
+   pulando.
+
+- **Arte:** a bancada, os gabinetes, as peças encaixadas e a tela de inicialização são camadas do tamanho da bancada
+  desenhadas pelo `scripts/gerar-arte.py` (`src/assets/montar/`); os lugares e as portas ficam em `bancada.json`.
+- **Para testar:** `?fase=3&missao=3` começa direto nesta missão (as duas anteriores contam como feitas). No
+  componente: `<OfficeGame fase={3} startAt={3} />`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -973,6 +1000,12 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
     com o tablet e o **!** → chegar perto dela → **Sim** → tablet com as palavras-cruzadas → **Começar** → **✕
     Desistir** → ela diz que pode tentar de novo → chegar perto → **Sim** → completar → **Devolver o tablet** →
     **+100 XP**, a Rita volta para o RH e o ESTAGIÁRIO bebe água.
+27. Fase 3, missão 3 (`?fase=3&missao=3`, ou seguindo depois da água): o ESTAGIÁRIO sai da Copa → o Marcos chama →
+    Sala de TI → 3 caixas aparecem → caixa do estudante → arrastar a placa-mãe antes do gabinete (*"Primeiro coloque o
+    gabinete…"*) → gabinete → placa-mãe → processador na fonte (dica do soquete) → processador no soquete → cooler,
+    memória, HD e fonte → **Ligar** (diz os cabos que faltam) → energia SATA na entrada de dados (não encaixa) → ligar
+    os 3 cabos → **Ligar** → tela de inicialização → **Pronto ✓** (🖥️ 1|3) → gamer (com a energia da placa de vídeo)
+    → escritório (HD e SSD) → o Marcos vem, **+100 XP** e comemoração.
 
 ## Correções incluídas desde a Fase 1
 

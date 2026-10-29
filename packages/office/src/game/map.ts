@@ -511,3 +511,19 @@ export function besidePlayer(player: Point, from: Point, gap = 30): Point {
   sides.sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y));
   return sides[0] ?? player;
 }
+
+// ---------------------------------------------------------------- fase 3, missão 3: as 3 caixas dos computadores
+
+/** Na Área de Trabalho, saindo da Copa: para onde o ESTAGIÁRIO foge depois da água. */
+export const COPA_ESCAPE = { x: t(31), y: t(15.6) };
+
+/** As 3 caixas na Sala de TI (canto de cima à esquerda do desenho de 48 x 40): estudante, gamer e escritório. */
+export const PC_BOXES: { at: Point; foot: Rect; zone: Rect }[] = [
+  { x: 44, y: 828 },
+  { x: 92, y: 828 },
+  { x: 286, y: 818 },
+].map((at) => ({
+  at,
+  foot: { x: at.x + 4, y: at.y + 24, w: 40, h: 14 },
+  zone: { x: at.x, y: at.y + 38, w: 48, h: 30 },
+}));
