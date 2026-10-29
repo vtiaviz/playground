@@ -157,6 +157,8 @@ export class OfficeScene extends Phaser.Scene {
   private magnifiers = new Map<string, Phaser.GameObjects.Image>();
   /** Placas caídas no chão, esperando o ESTAGIÁRIO pegar. */
   private floorBoards: { id: string; at: Point; board: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }[] = [];
+  /** Peças deixadas no chão de propósito: só voltam a abrir depois que o ESTAGIÁRIO se afasta. */
+  private pickupHold = new Set<string>();
   /** Travado, mas com animação própria (procurando no armário): o update não mexe no quadro. */
   private acting = false;
 
@@ -1246,7 +1248,7 @@ export class OfficeScene extends Phaser.Scene {
    * O ESTAGIÁRIO procura no móvel: mexe nas coisas, o cronômetro amarelo esvazia em cima da cabeça e a bagunça voa
    * para o chão. No fim, as placas (`boards`) caem brilhando, perto dele, para ele ir pegar.
    */
-  async search(spot: SearchSpot, boards: { id: string; family: 'arduino' | 'raspberry' }[], duration = 3000) {
+  async search(spot: SearchSpot, boards: { id: string; frame: string }[], duration = 3000) {
     const p = this.player;
     const feet = { x: p.x, y: p.y };
     this.acting = true;
@@ -1311,12 +1313,8 @@ export class OfficeScene extends Phaser.Scene {
       // sem lugar livre em volta (não acontece nos móveis do mapa, os testes conferem): cai no pé dele
       const to = land[k] ?? feet;
       return this.wait(duration * 0.72 + k * 320).then(async () => {
-        const img = await this.fling(`placa-${b.family}`, { x: spot.top.x, y: spot.top.y + 12 }, to, 70, 650);
-        img.setAngle(0).setDepth(-2);
-        const glow = this.add.image(to.x, to.y, 'moveis', 'brilho-placa').setDepth(-2.5).setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({ targets: glow, alpha: 0.35, scale: 1.25, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        this.tweens.add({ targets: img, y: to.y - 4, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        this.floorBoards.push({ id: b.id, at: to, board: img, glow });
+        const img = await this.fling(b.frame, { x: spot.top.x, y: spot.top.y + 12 }, to, 70, 650);
+        this.settleOnFloor(b.id, img, to);
       });
     });
 
@@ -1331,6 +1329,35 @@ export class OfficeScene extends Phaser.Scene {
     p.setFrame(ROW.up * FRAME.cols + 2);
     await Promise.all(landed);
     this.acting = false;
+  }
+
+  /** Coisa que caiu no chão (placa ou peça): brilha e balança até o ESTAGIÁRIO chegar perto. */
+  private settleOnFloor(id: string, img: Phaser.GameObjects.Image, to: Point) {
+    img.setAngle(0).setDepth(-2).setScale(1).setAlpha(1).setPosition(to.x, to.y);
+    const glow = this.add.image(to.x, to.y, 'moveis', 'brilho-placa').setDepth(-2.5).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: glow, alpha: 0.35, scale: 1.25, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: img, y: to.y - 4, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.floorBoards.push({ id, at: to, board: img, glow });
+  }
+
+  /** Fase 3: o ESTAGIÁRIO deixou a peça onde estava (só pega de novo depois de se afastar e voltar). */
+  putBack(id: string, frame: string, at: Point) {
+    this.pickupHold.add(id);
+    this.settleOnFloor(id, this.add.image(at.x, at.y, 'moveis', frame), at);
+  }
+
+  /** Fase 3: trocou a peça da mochila; a antiga cai no chão perto dele. */
+  async dropNear(id: string, frame: string) {
+    const p = this.player;
+    const from = { x: p.x, y: p.y };
+    const [to = from] = landingSpots(
+      from,
+      1,
+      this.spots.map((sp) => sp.zone),
+    );
+    this.pickupHold.add(id);
+    const img = await this.fling(frame, { x: from.x, y: from.y - FEET_Y + 20 }, to, 40, 500);
+    this.settleOnFloor(id, img, to);
   }
 
   /** Joga uma imagem do atlas de `from` até `to`, num arco, girando. */
@@ -1355,7 +1382,11 @@ export class OfficeScene extends Phaser.Scene {
   /** Pegou uma placa do chão: ela sobe até o ESTAGIÁRIO e some (o React mostra a placa grande). `true` = pegou. */
   private checkPickups() {
     const p = this.player;
-    const i = this.floorBoards.findIndex((b) => Math.hypot(b.at.x - p.x, b.at.y - p.y) < PICKUP_RADIUS);
+    for (const id of this.pickupHold) {
+      const b = this.floorBoards.find((x) => x.id === id);
+      if (!b || Math.hypot(b.at.x - p.x, b.at.y - p.y) > PICKUP_RADIUS + 14) this.pickupHold.delete(id);
+    }
+    const i = this.floorBoards.findIndex((b) => !this.pickupHold.has(b.id) && Math.hypot(b.at.x - p.x, b.at.y - p.y) < PICKUP_RADIUS);
     if (i < 0) return false;
     const [b] = this.floorBoards.splice(i, 1);
     this.tweens.killTweensOf([b.board, b.glow]);
@@ -1371,7 +1402,7 @@ export class OfficeScene extends Phaser.Scene {
       ease: 'Sine.easeIn',
       onComplete: () => b.board.destroy(),
     });
-    this.game.events.emit(OFFICE_EVENTS.pickup, b.id);
+    this.game.events.emit(OFFICE_EVENTS.pickup, b.id, b.at);
     return true;
   }
 

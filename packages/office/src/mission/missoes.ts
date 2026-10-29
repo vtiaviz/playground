@@ -63,6 +63,9 @@ export const OBJETIVOS = {
   exercicio: 'Abra o celular (botão 📱 Celular, no topo) e responda o exercício surpresa do curso',
   chefeDia2: 'Vá até a Diretoria: o chefe chamou você',
   embora: 'Dispensado por hoje! Saia da empresa pela porta principal',
+  ti31: 'Vá até a Sala de TI: o Marcos está chamando você',
+  pecas: 'Procure as peças da lista nos móveis com uma lupa em cima e chegue perto das que caírem no chão',
+  levarPecas: 'Mochila completa! Leve as peças para o Marcos, na Sala de TI',
   forcaTablet: 'Termine a forca do tablet do Marcos: acerte as 5 palavras (chegue perto do tablet no chão)',
 } as const;
 
@@ -333,4 +336,39 @@ export const FIM_DIA2 = {
   ],
   leaving: '🚪 Dispensado! Saia da empresa pela porta principal.',
   victory: 'UHUUUL! Segundo dia de estágio concluído!',
+} as const;
+
+/** Fase 3, missão 1 (aula: hardware, os componentes internos): as peças da lista do Marcos. */
+export const MISSAO_PECAS = {
+  id: 'pecas-hardware',
+  title: 'As peças da lista do Marcos',
+  xp: 100,
+  /** XP perdido a cada entrega com alguma peça errada. */
+  penalty: 50,
+  dayStart: '☀️ 3º dia de estágio · Aula: hardware, as peças de dentro do computador',
+  call: 'ESTAGIÁRIO! Gostei muito do seu trabalho ontem. Passa aqui na Sala de TI? Preciso de ajuda de novo!',
+  briefing: [
+    'Bom dia! Hoje vamos montar computadores novos, e a aula de hoje é hardware: as peças que ficam dentro do gabinete.',
+    'A placa-mãe é onde tudo se encaixa. O processador (CPU) faz as contas e precisa de um cooler em cima para não esquentar. A memória RAM guarda o que está sendo usado agora e apaga quando desliga.',
+    'O HD e o SSD guardam os arquivos de vez: o HD tem um disco girando; o SSD é só chip, bem mais rápido. A fonte transforma a energia da tomada para as peças, e a placa de vídeo cuida da imagem no monitor.',
+    'Atenção: processador, cooler e placa-mãe precisam ser do mesmo soquete, senão não encaixam! E a memória tem que ser do tipo que a placa-mãe aceita.',
+    'As peças estão espalhadas nos armários da empresa: procure nos móveis com uma lupa em cima. Aqui está a lista, com o desenho e as referências de cada peça.',
+    'Cuidado: tem peça parecida com outra referência! Leia o adesivo de cada uma e compare com a lista antes de guardar. Quando tiver as 8, traga aqui: peça errada eu devolvo e você perde 50 XP.',
+  ],
+  noneYet: 'Ainda não trouxe nenhuma peça? Procure nos móveis com uma lupa em cima e compare cada peça com a lista!',
+  missing: (names: string[]) =>
+    `Ainda faltam ${names.length === 1 ? 'esta peça' : `${names.length} peças`}: ${names.join(', ')}. Traga as 8 juntas que eu confiro tudo de uma vez.`,
+  empty: (where: string) => `Só papelada e bagunça ${where}… nenhuma peça aqui.`,
+  found: (n: number) => (n === 1 ? 'Caiu 1 peça! Chegue perto dela para ver.' : `Caíram ${n} peças! Chegue perto de cada uma para ver.`),
+  full: '🧰 8|8: uma peça de cada tipo na mochila! Leve para o Marcos, na Sala de TI.',
+  stored: (name: string) => `🧰 Guardou ${name} na mochila.`,
+  swapped: (name: string) => `🧰 Trocou ${name}: a outra ficou no chão.`,
+  left: 'Deixou a peça no chão.',
+  checking: 'Deixa eu conferir cada peça com a lista…',
+  problems: (n: number) =>
+    n === 1 ? 'Hmm… 1 peça não é a da lista. Vou ter que tirar 50 XP.' : `Hmm… ${n} peças não são as da lista. Vou ter que tirar 50 XP.`,
+  keepRight: (n: number) =>
+    n ? `As outras ${n} estão certas: essas eu já guardei aqui. Procure as que faltam e me traga.` : 'Procure as certas e me traga.',
+  success:
+    'Todas certinhas: placa-mãe, processador e cooler do mesmo soquete, memória DDR4, SSD, HD, fonte e placa de vídeo. Muito obrigado pela ajuda, estagiário!',
 } as const;

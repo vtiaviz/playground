@@ -17,13 +17,13 @@ export interface DaySummaryData {
 }
 
 export interface DaySummaryProps extends DaySummaryData {
-  /** Qual dia terminou: 1 (fase 1, padrão) ou 2 (fase 2). */
-  day?: 1 | 2;
+  /** Qual dia terminou: 1 (fase 1, padrão), 2 ou 3. */
+  day?: 1 | 2 | 3;
   /** XP com que o dia começou (no 2º dia, o que veio do 1º): o resumo mostra o ganho do dia e o total. */
   startXp?: number;
   onRestart: () => void;
   onClose: () => void;
-  /** Começa o dia seguinte (fase 2). Sem ele, o botão não aparece. */
+  /** Começa o dia seguinte. Sem ele, o botão não aparece. */
   onNextDay?: () => void;
 }
 
@@ -51,7 +51,7 @@ export function summarize(entries: XpEntry[]) {
 export default function DaySummary({ day = 1, startXp = 0, total, entries, onRestart, onClose, onNextDay }: DaySummaryProps) {
   const { rows, penalties, stars } = summarize(entries);
   const today = total - startXp;
-  const ordinal = day === 1 ? 'primeiro' : 'segundo';
+  const ordinal = ['primeiro', 'segundo', 'terceiro'][day - 1];
   return createPortal(
     <div className="office-summary-modal" role="dialog" aria-modal="true" aria-label={`Resumo do ${ordinal} dia`}>
       <div className="office-summary">
@@ -118,7 +118,7 @@ export default function DaySummary({ day = 1, startXp = 0, total, entries, onRes
           </button>
           {onNextDay && (
             <button type="button" className="office-primary" autoFocus onClick={onNextDay}>
-              Começar o 2º dia ▶
+              Começar o {day + 1}º dia ▶
             </button>
           )}
         </div>

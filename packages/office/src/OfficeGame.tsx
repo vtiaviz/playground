@@ -15,6 +15,8 @@ import { ChoiceBalloon, DialogBox } from './mission/Dialogs';
 import { checkSurvey, clearWrong, explainProblems, SURVEY_DEVICES, taggedCount, type DeviceTag, type Survey } from './mission/levantamento';
 import LevantamentoModal from './mission/LevantamentoModal';
 import MinigameOverlay from './mission/MinigameOverlay';
+import PecaNaMao from './mission/PecaNaMao';
+import { checkParts, explainWrong, KINDS, partById, partsIn, PART_KINDS, type Bag, type Part, type PartKind } from './mission/pecas';
 import PlacaDestaque from './mission/PlacaDestaque';
 import RelogioPassando from './mission/RelogioPassando';
 import { checkHangman, jingleVolume } from './mission/forca';
@@ -34,6 +36,7 @@ import {
   MISSAO_LEVANTAMENTO,
   MISSAO_MONTAGEM,
   MISSAO_PCS,
+  MISSAO_PECAS,
   MISSAO_PLACAS,
   MISSAO_PROVA,
   MISSAO_QUADRO,
@@ -80,8 +83,8 @@ export interface OfficeGameProps {
   surpriseQuiz?: MissionGame | null;
   /** Para testes: começa direto na missão 2 a 6 da fase 1, ou na 2 a 5 da fase 2 (6 = fim do 2º dia; as anteriores contam como feitas). */
   startAt?: 1 | 2 | 3 | 4 | 5 | 6;
-  /** Começa no 1º dia (fase 1, padrão) ou direto no 2º dia (fase 2, com o XP de uma fase 1 sem erros). */
-  fase?: 1 | 2;
+  /** Começa no 1º dia (fase 1, padrão) ou direto no 2º ou 3º dia (com o XP dos dias anteriores sem erros). */
+  fase?: 1 | 2 | 3;
   /** Chamado quando uma missão termina (para guardar o XP). */
   onMissionComplete?: (result: MissionResult) => void;
   /** Chamado no fim da fase 1 (fim do primeiro dia), com o resumo do XP. */
@@ -111,7 +114,8 @@ type Phase =
   | 'search'
   | 'placa'
   | 'hangman'
-  | 'phone';
+  | 'phone'
+  | 'peca';
 /** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
 type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
@@ -122,6 +126,8 @@ type Fase2M3 = 'off' | 'called' | 'working' | 'done';
 type Fase2M4 = 'off' | 'resting' | 'crashed' | 'playing' | 'escaping' | 'done';
 /** Fase 2, missão 5: o celular vibrando, aberto (exercício ainda não entregue), concluída. */
 type Fase2M5 = 'off' | 'ringing' | 'pending' | 'done';
+/** Fase 3, missão 1: Marcos chamou, procurando as peças, conferindo, concluída. */
+type Fase3M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
 type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
 /** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
@@ -171,6 +177,7 @@ const HIDE_SPOTS = new Map(HIDEOUTS.map((h) => [h.id, searchSpot(h.host, h.nth)]
 
 /** XP de quem terminou a fase 1 sem nenhuma bronca (para começar direto na fase 2). */
 const FASE1_XP = [MISSAO_CEO, MISSAO_PCS, MISSAO_MONTAGEM, MISSAO_QUADRO, MISSAO_PROVA, MISSAO_FIM].reduce((a, m) => a + m.xp, 0);
+const FASE2_XP = [MISSAO_LEVANTAMENTO, MISSAO_CACA, MISSAO_PLACAS, MISSAO_FORCA, MISSAO_EXERCICIO].reduce((a, m) => a + m.xp, 0);
 
 const DPAD: { label: string; x: number; y: number; area: string }[] = [
   { label: '▲', x: 0, y: -1, area: 'up' },
@@ -184,15 +191,15 @@ const DPAD: { label: string; x: number; y: number; area: string }[] = [
  * dia volta com o XP do primeiro); "Começar o 2º dia" abre a fase 2 levando o XP do primeiro dia.
  */
 export default function OfficeGame(props: OfficeGameProps) {
-  const [day, setDay] = useState<{ run: number; fase: 1 | 2; xp?: number }>({ run: 0, fase: props.fase ?? 1 });
+  const [day, setDay] = useState<{ run: number; fase: 1 | 2 | 3; xp?: number }>({ run: 0, fase: props.fase ?? 1 });
   return (
     <OfficeDay
       key={day.run}
       {...props}
       fase={day.fase}
-      startXp={day.xp}
-      onRestart={() => setDay((d) => (d.fase === 2 ? { run: d.run + 1, fase: 2, xp: d.xp } : { run: d.run + 1, fase: 1 }))}
-      onNextDay={(xp) => setDay((d) => ({ run: d.run + 1, fase: 2, xp }))}
+      startXp={day.xp ?? (day.fase === 3 ? FASE1_XP + FASE2_XP : FASE1_XP)}
+      onRestart={() => setDay((d) => (d.fase === 1 ? { run: d.run + 1, fase: 1 } : { run: d.run + 1, fase: d.fase, xp: d.xp }))}
+      onNextDay={(xp) => setDay((d) => ({ run: d.run + 1, fase: d.fase === 1 ? 2 : 3, xp }))}
     />
   );
 }
@@ -329,6 +336,28 @@ function OfficeDay({
     f5Ref.current = v;
     setF5State(v);
   };
+  // fase 3, missão 1
+  const [p1, setP1State] = useState<Fase3M1>('off');
+  const p1Ref = useRef<Fase3M1>('off');
+  const setP1 = (v: Fase3M1) => {
+    p1Ref.current = v;
+    setP1State(v);
+  };
+  /** Mochila (uma peça de cada tipo) e os itens da lista que o Marcos já recebeu certos. */
+  const [bag, setBagState] = useState<Bag>({});
+  const bagRef = useRef<Bag>({});
+  const setBag = (b: Bag) => {
+    bagRef.current = b;
+    setBagState(b);
+  };
+  const [delivered, setDeliveredState] = useState<ReadonlySet<PartKind>>(new Set());
+  const deliveredRef = useRef<ReadonlySet<PartKind>>(new Set());
+  const setDelivered = (d: ReadonlySet<PartKind>) => {
+    deliveredRef.current = d;
+    setDeliveredState(d);
+  };
+  /** Peça na mão (e onde estava no chão); `part: null` = só olhando a lista. */
+  const [held, setHeld] = useState<{ part: Part | null; at?: { x: number; y: number } } | null>(null);
   // fim do 2º dia
   const [fEnd, setFEndState] = useState<Fase2Fim>('off');
   const fEndRef = useRef<Fase2Fim>('off');
@@ -369,7 +398,7 @@ function OfficeDay({
     pc: (_i: number) => {},
     box: (_i: number) => {},
     spot: (_id: string) => {},
-    pickup: (_id: string) => {},
+    pickup: (_id: string, _at: { x: number; y: number }) => {},
     room: (_r: Room | null) => {},
     endRound: (_r: 'tempo' | 'todas') => {},
   });
@@ -394,7 +423,7 @@ function OfficeDay({
     game.events.on(OFFICE_EVENTS.pc, (i: number) => handlers.current.pc(i));
     game.events.on(OFFICE_EVENTS.box, (i: number) => handlers.current.box(i));
     game.events.on(OFFICE_EVENTS.spot, (id: string) => handlers.current.spot(id));
-    game.events.on(OFFICE_EVENTS.pickup, (id: string) => handlers.current.pickup(id));
+    game.events.on(OFFICE_EVENTS.pickup, (id: string, at: { x: number; y: number }) => handlers.current.pickup(id, at));
     host.focus();
     return () => {
       alive.current = false;
@@ -1326,7 +1355,7 @@ function OfficeDay({
     s.setSpots(spotsForF3());
     await s.search(
       HIDE_SPOTS.get(h.id)!,
-      h.boards.map((model, k) => ({ id: `${h.id}:${k}`, family: BOARDS[model].family })),
+      h.boards.map((model, k) => ({ id: `${h.id}:${k}`, frame: `placa-${BOARDS[model].family}` })),
     );
     if (!alive.current) return;
     backToExplore();
@@ -1585,6 +1614,182 @@ function OfficeDay({
     });
   };
 
+  // ------------------------------------------------------------ fase 3, missão 1: as peças da lista do Marcos
+
+  const partsLeft = () => HIDEOUTS.filter((h) => !searched.current.has(h.id));
+  const spotsForP1 = () => [
+    ...partsLeft().map((h) => ({ id: `busca:${h.id}`, zone: HIDE_SPOTS.get(h.id)!.zone })),
+    { id: 'marcos', zone: IT_ZONE },
+  ];
+  const magnifiersForP1 = () => partsLeft().map((h) => ({ id: h.id, at: HIDE_SPOTS.get(h.id)!.top }));
+  /** Peças na mochila mais as já entregues (o contador 🧰 N|8). */
+  const partsCount = (b: Bag = bag, d: ReadonlySet<PartKind> = delivered) => PART_KINDS.filter((k) => d.has(k) || b[k]).length;
+
+  /** Começo do 3º dia: o escritório como ficou ontem e o Marcos chamando. */
+  const startDay3 = async () => {
+    const s = scene();
+    if (!s) return;
+    setXpTo(startXp);
+    setMissionDone(true);
+    setM2('done');
+    setM3('done');
+    setM4('done');
+    setM5('done');
+    setM6('done');
+    s.setCeoTalk(false);
+    s.setCeoMood('tranquilo');
+    RH_STATIONS.forEach((st) => s.setRhStation(st.index, { built: true, boxOpen: true }));
+    setToast(MISSAO_PECAS.dayStart);
+    await new Promise((r) => window.setTimeout(r, 2500));
+    await whenFree();
+    const sc = scene();
+    if (!alive.current || !sc) return;
+    setP1('called');
+    await sc.itGuyWaits();
+    sc.setItAlert(true);
+    say([marcos(MISSAO_PECAS.call, { continueLabel: 'Estou indo!' })], () => {
+      scene()?.setSpots([{ id: 'marcos', zone: IT_ZONE }]);
+      backToExplore();
+    });
+  };
+
+  const onSpotP1 = (id: string) => {
+    if (phaseRef.current !== 'explore') return;
+    const s = scene();
+    if (!s) return;
+    if (id === 'marcos') {
+      if (p1Ref.current !== 'called' && p1Ref.current !== 'working') return;
+      s.setFrozen(true);
+      s.itGuyFacePlayer();
+      if (p1Ref.current === 'called') briefingP1();
+      else deliverParts();
+      return;
+    }
+    const h = HIDEOUTS.find((x) => `busca:${x.id}` === id);
+    if (p1Ref.current !== 'working' || !h || searched.current.has(h.id)) return;
+    void searchParts(h);
+  };
+
+  /** Na Sala de TI: a aula de hardware, a tarefa e a lista. */
+  const briefingP1 = () => {
+    scene()?.setItAlert(false);
+    const lines = MISSAO_PECAS.briefing.map((t, i, all) =>
+      marcos(t, i === all.length - 1 ? { continueLabel: 'Vou procurar!', badge: '📋 Lista de peças (botão 📋 Lista, no topo)' } : {}),
+    );
+    say(lines, () => {
+      const sc = scene();
+      if (!sc) return;
+      setP1('working');
+      sc.setMagnifiers(magnifiersForP1());
+      sc.setSpots(spotsForP1());
+      sc.setFrozen(true);
+      setHeld({ part: null });
+      setPhase('peca');
+    });
+  };
+
+  /** Procura no móvel (a mesma animação das placas): as peças pulam e caem no chão. */
+  const searchParts = async (h: Hideout) => {
+    const s = scene();
+    if (!s) return;
+    searched.current.add(h.id);
+    s.setFrozen(true);
+    setPhase('search');
+    s.setMagnifiers(magnifiersForP1());
+    s.setSpots(spotsForP1());
+    const ids = partsIn(h.id);
+    await s.search(
+      HIDE_SPOTS.get(h.id)!,
+      ids.map((id) => ({ id, frame: `peca-${partById(id)!.kind}` })),
+    );
+    if (!alive.current) return;
+    backToExplore();
+    setToast(ids.length ? MISSAO_PECAS.found(ids.length) : MISSAO_PECAS.empty(h.where));
+  };
+
+  /** Chegou perto de uma peça no chão: ela aparece na mão do ESTAGIÁRIO, ao lado da lista. */
+  const pickPart = (id: string, at: { x: number; y: number }) => {
+    const part = partById(id);
+    if (!part || p1Ref.current !== 'working') return;
+    scene()?.setFrozen(true);
+    setHeld({ part, at });
+    setPhase('peca');
+  };
+
+  /** Guardou: vai para a mochila; se já tinha uma do mesmo tipo, a antiga cai no chão. */
+  const storePart = () => {
+    const part = held?.part;
+    if (!part) return;
+    const old = bagRef.current[part.kind];
+    const next = { ...bagRef.current, [part.kind]: part.id };
+    setBag(next);
+    setHeld(null);
+    backToExplore();
+    if (old) void scene()?.dropNear(old, `peca-${part.kind}`);
+    if (partsCount(next) === PART_KINDS.length) setToast(MISSAO_PECAS.full);
+    else setToast(old ? MISSAO_PECAS.swapped(KINDS[part.kind].the) : MISSAO_PECAS.stored(KINDS[part.kind].the));
+  };
+
+  /** Deixou: a peça volta para o chão onde estava (ou fecha a lista). */
+  const leavePart = () => {
+    const h = held;
+    setHeld(null);
+    backToExplore();
+    if (h?.part && h.at) scene()?.putBack(h.part.id, `peca-${h.part.kind}`, h.at);
+  };
+
+  /** Entrega ao Marcos: confere tudo; peça errada volta, ele explica a diferença e tira 50 XP. */
+  const deliverParts = () => {
+    const r = checkParts(bagRef.current, deliveredRef.current);
+    if (!r.ok) {
+      const none = !Object.keys(bagRef.current).length && !deliveredRef.current.size;
+      const text = none ? MISSAO_PECAS.noneYet : MISSAO_PECAS.missing(r.missing.map((k) => KINDS[k].name));
+      say([marcos(text, { continueLabel: 'Vou procurar' })], backToExplore);
+      return;
+    }
+    const s = scene();
+    if (!s) return;
+    const accepted = new Set([...deliveredRef.current, ...r.right]);
+    setDelivered(accepted);
+    if (r.wrong.length) {
+      addXp(MISSAO_PECAS, -MISSAO_PECAS.penalty, `${r.wrong.length === 1 ? '1 peça errada' : `${r.wrong.length} peças erradas`} na entrega`);
+      const back: Bag = {};
+      setBag(back);
+      say(
+        [
+          marcos(MISSAO_PECAS.checking),
+          marcos(MISSAO_PECAS.problems(r.wrong.length), { badge: `−${MISSAO_PECAS.penalty} XP` }),
+          ...r.wrong.map((w) => marcos(explainWrong(w.kind, w.got))),
+          marcos(MISSAO_PECAS.keepRight(r.right.length), { continueLabel: 'Vou procurar' }),
+        ],
+        () => {
+          backToExplore();
+          onMissionComplete?.({ missionId: MISSAO_PECAS.id, xp: -MISSAO_PECAS.penalty, success: false });
+        },
+      );
+      return;
+    }
+    setBag({});
+    addXp(MISSAO_PECAS, MISSAO_PECAS.xp);
+    setP1('done');
+    s.setSpots([]);
+    s.setMagnifiers([]);
+    s.setItAlert(false);
+    say(
+      [marcos(MISSAO_PECAS.checking), marcos(MISSAO_PECAS.success, { badge: `+${MISSAO_PECAS.xp} XP · Missão concluída!`, continueLabel: 'De nada!' })],
+      async () => {
+        const sc = scene();
+        if (!sc) return;
+        sc.setFrozen(true);
+        setPhase('dialog');
+        await sc.cheer();
+        if (!alive.current) return;
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_PECAS.id, xp: MISSAO_PECAS.xp, success: true });
+      },
+    );
+  };
+
   /** Para testes: pula direto para a missão 2 a 6 (as anteriores entram no resumo como feitas, sem bronca). */
   const skipTo = (n: 2 | 3 | 4 | 5 | 6) => {
     const done = [MISSAO_CEO, MISSAO_PCS, MISSAO_MONTAGEM, MISSAO_QUADRO, MISSAO_PROVA].slice(0, n - 1);
@@ -1624,7 +1829,7 @@ function OfficeDay({
 
   handlers.current = {
     talk: () => {
-      if (fase === 2) {
+      if (fase >= 2) {
         if (f2Ref.current === 'called') ceoBriefingF2();
         else if (fEndRef.current === 'called') ceoDismiss();
         return;
@@ -1643,12 +1848,13 @@ function OfficeDay({
     },
     pc: openStation,
     box: openBox,
-    spot: (id) => (fase === 2 ? onSpotF2(id) : onSpot(id)),
-    pickup: pickUp,
+    spot: (id) => (fase === 3 ? onSpotP1(id) : fase === 2 ? onSpotF2(id) : onSpot(id)),
+    pickup: (id, at) => (fase === 3 ? pickPart(id, at) : pickUp(id)),
     room: (r) => {
       if (!started.current) {
         started.current = true;
-        if (fase === 2) void startDay2();
+        if (fase === 3) void startDay3();
+        else if (fase === 2) void startDay2();
         else if (startAt > 1) skipTo(startAt as 2 | 3 | 4 | 5 | 6);
       }
       if (r?.id === 'rh' && m3Ref.current === 'called') void meetRita();
@@ -1664,7 +1870,13 @@ function OfficeDay({
   // ------------------------------------------------------------ tela
 
   let objective: { title: string; text: string; done: boolean };
-  if (fase === 2 && fEnd !== 'off') {
+  if (fase === 3) {
+    const title = `Fase 3 · Missão 1: ${MISSAO_PECAS.title}.`;
+    if (p1 === 'done') objective = { title: 'Missão concluída:', text: `${MISSAO_PECAS.title} (+${MISSAO_PECAS.xp} XP). Explore o escritório à vontade.`, done: true };
+    else if (p1 === 'working')
+      objective = { title, text: partsCount() === PART_KINDS.length ? OBJETIVOS.levarPecas : `${OBJETIVOS.pecas} (${partsCount()}|${PART_KINDS.length}).`, done: false };
+    else objective = { title, text: p1 === 'called' ? OBJETIVOS.ti31 : 'O Marcos está na Sala de TI…', done: false };
+  } else if (fase === 2 && fEnd !== 'off') {
     objective =
       fEnd === 'done'
         ? { title: 'Fase 2 concluída:', text: 'Fim do 2º dia de estágio. Até amanhã!', done: true }
@@ -1782,6 +1994,27 @@ function OfficeDay({
             </span>
           </span>
         )}
+        {p1 === 'working' && (
+          <>
+            <span className={partsCount() === PART_KINDS.length ? 'office-parts is-full' : 'office-parts'} title="Peças na mochila e entregues">
+              <span aria-hidden="true">🧰</span>
+              <span>
+                <strong key={partsCount()}>{partsCount()}</strong>|{PART_KINDS.length}
+              </span>
+            </span>
+            <button
+              type="button"
+              disabled={phase !== 'explore'}
+              onClick={() => {
+                scene()?.setFrozen(true);
+                setHeld({ part: null });
+                setPhase('peca');
+              }}
+            >
+              📋 Lista
+            </button>
+          </>
+        )}
         {f5 === 'pending' && (
           <button type="button" className="office-phone-hud" disabled={phase !== 'explore'} onClick={openPhone}>
             📱 Celular
@@ -1894,11 +2127,11 @@ function OfficeDay({
           <DaySummary
             day={fase}
             total={xp}
-            startXp={fase === 2 ? startXp : 0}
+            startXp={fase > 1 ? startXp : 0}
             entries={xpLog.current}
             onRestart={onRestart}
             onClose={backToExplore}
-            onNextDay={fase === 1 ? () => onNextDay(xpNow.current) : undefined}
+            onNextDay={fase < 3 ? () => onNextDay(xpNow.current) : undefined}
           />
         )}
         {phase === 'survey' && openDevice && (
@@ -1938,6 +2171,9 @@ function OfficeDay({
             doneLabel="Pronto"
             onClose={finishHangman}
           />
+        )}
+        {phase === 'peca' && held && (
+          <PecaNaMao key={held.part?.id ?? 'lista'} part={held.part} bag={bag} delivered={delivered} onStore={storePart} onLeave={leavePart} />
         )}
         {phase === 'phone' && (
           <CelularOverlay
