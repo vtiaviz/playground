@@ -17,8 +17,8 @@ export interface DaySummaryData {
 }
 
 export interface DaySummaryProps extends DaySummaryData {
-  /** Qual dia terminou: 1 (fase 1, padrão), 2 ou 3. */
-  day?: 1 | 2 | 3;
+  /** Qual dia terminou: 1 (fase 1, padrão), 2, 3 ou 4. */
+  day?: 1 | 2 | 3 | 4;
   /** XP com que o dia começou (no 2º dia, o que veio do 1º): o resumo mostra o ganho do dia e o total. */
   startXp?: number;
   onRestart: () => void;
@@ -51,7 +51,7 @@ export function summarize(entries: XpEntry[]) {
 export default function DaySummary({ day = 1, startXp = 0, total, entries, onRestart, onClose, onNextDay }: DaySummaryProps) {
   const { rows, penalties, stars } = summarize(entries);
   const today = total - startXp;
-  const ordinal = ['primeiro', 'segundo', 'terceiro'][day - 1];
+  const ordinal = ['primeiro', 'segundo', 'terceiro', 'quarto'][day - 1];
   return createPortal(
     <div className="office-summary-modal" role="dialog" aria-modal="true" aria-label={`Resumo do ${ordinal} dia`}>
       <div className="office-summary">

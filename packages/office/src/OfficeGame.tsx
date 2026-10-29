@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import type { GameResult } from '@playground/games';
 import { createOfficeGame, getOfficeScene } from './game/createGame';
-import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, URINAL_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
+import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, PROJECTOR_BOX, URINAL_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
 import { OFFICE_EVENTS, RH_LOOK } from './game/OfficeScene';
 import AlarmPanel from './mission/AlarmPanel';
 import CelularOverlay from './mission/CelularOverlay';
@@ -47,6 +47,7 @@ import {
   MISSAO_PCS,
   MISSAO_PECAS,
   MISSAO_PLACAS,
+  MISSAO_PROJETOR,
   MISSAO_PROVA,
   MISSAO_QUADRO,
   OBJETIVOS,
@@ -58,6 +59,8 @@ import {
 } from './mission/missoes';
 import QuadroOverlay from './mission/QuadroOverlay';
 import SonhoOverlay from './mission/SonhoOverlay';
+import ProjetorModal from './mission/ProjetorModal';
+import { newSetupState, type SetupState } from './mission/projetor';
 import { allPlaced, checkKit, KITS, newKitState, type KitState } from './mission/montagem';
 import MontagemModal from './mission/MontagemModal';
 import PcModal, { formatTime } from './mission/PcModal';
@@ -100,8 +103,8 @@ export interface OfficeGameProps {
   bathroomWordSearch?: MissionGame | null;
   /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 a 5 da fase 3 (as anteriores contam como feitas). */
   startAt?: 1 | 2 | 3 | 4 | 5 | 6;
-  /** Começa no 1º dia (fase 1, padrão) ou direto no 2º ou 3º dia (com o XP dos dias anteriores sem erros). */
-  fase?: 1 | 2 | 3;
+  /** Começa no 1º dia (fase 1, padrão) ou direto no 2º, 3º ou 4º dia (com o XP dos dias anteriores sem erros). */
+  fase?: 1 | 2 | 3 | 4;
   /** Chamado quando uma missão termina (para guardar o XP). */
   onMissionComplete?: (result: MissionResult) => void;
   /** Chamado no fim da fase 1 (fim do primeiro dia), com o resumo do XP. */
@@ -137,7 +140,8 @@ type Phase =
   | 'crosswordP2'
   | 'montar'
   | 'quizP4'
-  | 'dreamP5';
+  | 'dreamP5'
+  | 'projetor';
 /** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
 type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
@@ -161,6 +165,8 @@ type Fase3M4 = 'off' | 'called' | 'quiz' | 'waiting' | 'done';
  * saindo do banheiro, fim do expediente (indo embora) e concluída (saiu e viu o resumo do dia).
  */
 type Fase3M5 = 'off' | 'running' | 'wet' | 'urinal' | 'exit' | 'leaving' | 'done';
+/** Fase 4, missão 1: o chefe chamou (indo à Sala de Reuniões), instalando o projetor e a webcam, concluída. */
+type Fase4M1 = 'off' | 'called' | 'working' | 'done';
 /** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
 type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
 /** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
@@ -211,6 +217,9 @@ const HIDE_SPOTS = new Map(HIDEOUTS.map((h) => [h.id, searchSpot(h.host, h.nth)]
 /** XP de quem terminou a fase 1 sem nenhuma bronca (para começar direto na fase 2). */
 const FASE1_XP = [MISSAO_CEO, MISSAO_PCS, MISSAO_MONTAGEM, MISSAO_QUADRO, MISSAO_PROVA, MISSAO_FIM].reduce((a, m) => a + m.xp, 0);
 const FASE2_XP = [MISSAO_LEVANTAMENTO, MISSAO_CACA, MISSAO_PLACAS, MISSAO_FORCA, MISSAO_EXERCICIO].reduce((a, m) => a + m.xp, 0);
+const FASE3_XP = [MISSAO_PECAS, MISSAO_CRUZADAS_RITA, MISSAO_MONTAR_PCS, MISSAO_ALINHAMENTO, MISSAO_BANHEIRO].reduce((a, m) => a + m.xp, 0);
+/** XP com que cada dia começa quando se abre direto nele (os dias anteriores sem nenhuma bronca). */
+const START_XP: Record<1 | 2 | 3 | 4, number> = { 1: 0, 2: FASE1_XP, 3: FASE1_XP + FASE2_XP, 4: FASE1_XP + FASE2_XP + FASE3_XP };
 
 const DPAD: { label: string; x: number; y: number; area: string }[] = [
   { label: '▲', x: 0, y: -1, area: 'up' },
@@ -224,15 +233,15 @@ const DPAD: { label: string; x: number; y: number; area: string }[] = [
  * dia volta com o XP do primeiro); "Começar o 2º dia" abre a fase 2 levando o XP do primeiro dia.
  */
 export default function OfficeGame(props: OfficeGameProps) {
-  const [day, setDay] = useState<{ run: number; fase: 1 | 2 | 3; xp?: number }>({ run: 0, fase: props.fase ?? 1 });
+  const [day, setDay] = useState<{ run: number; fase: 1 | 2 | 3 | 4; xp?: number }>({ run: 0, fase: props.fase ?? 1 });
   return (
     <OfficeDay
       key={day.run}
       {...props}
       fase={day.fase}
-      startXp={day.xp ?? (day.fase === 3 ? FASE1_XP + FASE2_XP : FASE1_XP)}
+      startXp={day.xp ?? START_XP[day.fase]}
       onRestart={() => setDay((d) => (d.fase === 1 ? { run: d.run + 1, fase: 1 } : { run: d.run + 1, fase: d.fase, xp: d.xp }))}
-      onNextDay={(xp) => setDay((d) => ({ run: d.run + 1, fase: d.fase === 1 ? 2 : 3, xp }))}
+      onNextDay={(xp) => setDay((d) => ({ run: d.run + 1, fase: d.fase === 1 ? 2 : d.fase === 2 ? 3 : 4, xp }))}
     />
   );
 }
@@ -414,6 +423,15 @@ function OfficeDay({
     setP5State(v);
   };
   const deadline5 = useRef(0);
+  // fase 4, missão 1
+  const [q1, setQ1State] = useState<Fase4M1>('off');
+  const q1Ref = useRef<Fase4M1>('off');
+  const setQ1 = (v: Fase4M1) => {
+    q1Ref.current = v;
+    setQ1State(v);
+  };
+  /** Instalação do projetor e da webcam (continua de onde parou ao fechar o modal). */
+  const [setup, setSetup] = useState<SetupState>(() => newSetupState());
   const [secondsLeft5, setSecondsLeft5] = useState<number>(MISSAO_BANHEIRO.tempo);
   /** Mochila (uma peça de cada tipo) e os itens da lista que o Marcos já recebeu certos. */
   const [bag, setBagState] = useState<Bag>({});
@@ -2065,7 +2083,7 @@ function OfficeDay({
     s.setItAlert(false);
     s.setSpots([]);
     setPhase('dialog');
-    s.showPcBoxes();
+    s.showBoxes();
     const mid = PC_BOXES[1].at;
     await s.lookAt(mid.x + 60, mid.y);
     if (!alive.current) return;
@@ -2101,7 +2119,7 @@ function OfficeDay({
     buildsDoneRef.current = next;
     setBuildsDone(next);
     const s = scene();
-    s?.setPcBox(index, true);
+    s?.setBox(index, true);
     s?.setSpots(boxSpots());
     setToast(MISSAO_MONTAR_PCS.built(build.title, next.length));
     backToExplore();
@@ -2313,6 +2331,108 @@ function OfficeDay({
     });
   };
 
+  // ------------------------------------------------------------ fase 4, missão 1: o projetor e a webcam da vídeo chamada
+
+  /** Começo do 4º dia: o Marcos faltou e o chefe, nervoso, vai até a Sala de Reuniões chamar o ESTAGIÁRIO. */
+  const startDay4 = async () => {
+    const s = scene();
+    if (!s) return;
+    setXpTo(startXp);
+    setMissionDone(true);
+    setM2('done');
+    setM3('done');
+    setM4('done');
+    setM5('done');
+    setM6('done');
+    s.setCeoTalk(false);
+    s.setCeoMood('frustrado');
+    RH_STATIONS.forEach((st) => s.setRhStation(st.index, { built: true, boxOpen: true }));
+    s.rhPlace(RH_WAIT, 'down');
+    s.itGuyAbsent();
+    setToast(MISSAO_PROJETOR.dayStart);
+    await new Promise((r) => window.setTimeout(r, 4800));
+    if (!alive.current) return;
+    setToast(MISSAO_PROJETOR.absent);
+    await new Promise((r) => window.setTimeout(r, 1500));
+    await whenFree();
+    const sc = scene();
+    if (!alive.current || !sc) return;
+    sc.setCeoWalkerSmoke(true);
+    await sc.ceoWalkTo(MEETING_BOSS, 'left', true);
+    if (!alive.current) return;
+    await whenFree();
+    if (!alive.current) return;
+    setQ1('called');
+    say([ceo(MISSAO_PROJETOR.call, 'ceo-bravo-b', { continueLabel: 'Estou indo!' })], () => {
+      backToExplore();
+      if (roomRef.current?.id === 'reunioes') meetBoss41();
+    });
+  };
+
+  /** Chegou na Sala de Reuniões: o chefe explica o problema e a caixa aparece no canto. */
+  const meetBoss41 = () => {
+    const s = scene();
+    if (!s || q1Ref.current !== 'called') return;
+    s.setFrozen(true);
+    s.setCeoWalkerAlert(false);
+    s.ceoFacePlayer();
+    const lines = MISSAO_PROJETOR.briefing.map((t, i, all) =>
+      ceo(t, i === 0 ? 'ceo-bravo-b' : 'ceo-bravo-a', i === all.length - 1 ? { continueLabel: 'Deixa comigo!' } : {}),
+    );
+    say(lines, () => {
+      const sc = scene();
+      if (!sc) return;
+      setQ1('working');
+      sc.showBoxes([PROJECTOR_BOX]);
+      sc.setSpots([{ id: 'projetor', zone: PROJECTOR_BOX.zone }]);
+      setToast(MISSAO_PROJETOR.open);
+      backToExplore();
+    });
+  };
+
+  const onSpotQ = (id: string) => {
+    if (phaseRef.current !== 'explore' || id !== 'projetor' || q1Ref.current !== 'working') return;
+    scene()?.setFrozen(true);
+    setPhase('projetor');
+  };
+
+  /** Fechou a mesa: com tudo funcionando, o chefe agradece muito; senão, continua depois. */
+  const closeProjector = (done: boolean) => {
+    if (!done) {
+      setToast(MISSAO_PROJETOR.notYet);
+      backToExplore();
+      return;
+    }
+    void finishQ1();
+  };
+
+  const finishQ1 = async () => {
+    const s = scene();
+    if (!s) return;
+    s.setFrozen(true);
+    setPhase('dialog');
+    s.setSpots([]);
+    s.setBox(0, true);
+    s.setCeoWalkerSmoke(false);
+    s.ceoFacePlayer();
+    addXp(MISSAO_PROJETOR, MISSAO_PROJETOR.xp);
+    setQ1('done');
+    const [first, last] = MISSAO_PROJETOR.thanks;
+    say(
+      [ceo(first, 'ceo-feliz-a'), ceo(last, 'ceo-feliz-b', { badge: `+${MISSAO_PROJETOR.xp} XP · Missão concluída!`, continueLabel: 'De nada, chefe!' })],
+      async () => {
+        const sc = scene();
+        if (!sc) return;
+        sc.setFrozen(true);
+        setPhase('dialog');
+        await sc.cheer();
+        if (!alive.current) return;
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_PROJETOR.id, xp: MISSAO_PROJETOR.xp, success: true });
+      },
+    );
+  };
+
   /** Para testes: pula direto para a missão 2 a 6 (as anteriores entram no resumo como feitas, sem bronca). */
   const skipTo = (n: 2 | 3 | 4 | 5 | 6) => {
     const done = [MISSAO_CEO, MISSAO_PCS, MISSAO_MONTAGEM, MISSAO_QUADRO, MISSAO_PROVA].slice(0, n - 1);
@@ -2371,12 +2491,13 @@ function OfficeDay({
     },
     pc: openStation,
     box: openBox,
-    spot: (id) => (fase === 3 ? onSpotP1(id) : fase === 2 ? onSpotF2(id) : onSpot(id)),
+    spot: (id) => (fase === 4 ? onSpotQ(id) : fase === 3 ? onSpotP1(id) : fase === 2 ? onSpotF2(id) : onSpot(id)),
     pickup: (id, at) => (fase === 3 ? pickPart(id, at) : pickUp(id)),
     room: (r) => {
       if (!started.current) {
         started.current = true;
-        if (fase === 3) void startDay3();
+        if (fase === 4) void startDay4();
+        else if (fase === 3) void startDay3();
         else if (fase === 2) void startDay2();
         else if (startAt > 1) skipTo(startAt as 2 | 3 | 4 | 5 | 6);
       }
@@ -2386,6 +2507,7 @@ function OfficeDay({
       if (r?.id === 'copa' && m5Ref.current === 'called' && phaseRef.current === 'explore') meetElisa();
       if (r?.id === 'copa' && p2Ref.current === 'thirsty' && phaseRef.current === 'explore') void ritaRuns();
       if (r?.id === 'reunioes' && p4Ref.current === 'called' && phaseRef.current === 'explore') meetBoss4();
+      if (r?.id === 'reunioes' && q1Ref.current === 'called' && phaseRef.current === 'explore') meetBoss41();
       if (r?.id === 'entrada' && m6Ref.current === 'armed') void lockUp();
       if (r?.id === 'entrada' && fEndRef.current === 'leaving') void leaveDay2();
       if (r?.id !== 'banheiro' && p5Ref.current === 'exit') startDay3End();
@@ -2398,7 +2520,13 @@ function OfficeDay({
   // ------------------------------------------------------------ tela
 
   let objective: { title: string; text: string; done: boolean };
-  if (fase === 3 && p5 !== 'off') {
+  if (fase === 4) {
+    const title = `Fase 4 · Missão 1: ${MISSAO_PROJETOR.title}.`;
+    if (q1 === 'done')
+      objective = { title: 'Missão concluída:', text: `${MISSAO_PROJETOR.title} (+${MISSAO_PROJETOR.xp} XP). Explore o escritório à vontade.`, done: true };
+    else if (q1 === 'off') objective = { title: '4º dia de estágio.', text: OBJETIVOS.entrar, done: false };
+    else objective = { title, text: q1 === 'called' ? OBJETIVOS.reuniao41 : OBJETIVOS.projetor, done: false };
+  } else if (fase === 3 && p5 !== 'off') {
     const title = `Fase 3 · Missão 5: ${MISSAO_BANHEIRO.title}.`;
     if (p5 === 'leaving') objective = { title: 'Fim do 3º dia.', text: OBJETIVOS.embora3, done: false };
     else if (p5 === 'done') objective = { title: 'Fase 3 concluída:', text: 'Terceiro dia de estágio completo!', done: true };
@@ -2715,7 +2843,7 @@ function OfficeDay({
             entries={xpLog.current}
             onRestart={onRestart}
             onClose={backToExplore}
-            onNextDay={fase < 3 ? () => onNextDay(xpNow.current) : undefined}
+            onNextDay={fase < 4 ? () => onNextDay(xpNow.current) : undefined}
           />
         )}
         {phase === 'survey' && openDevice && (
@@ -2801,6 +2929,7 @@ function OfficeDay({
             onClose={finishQuizP4}
           />
         )}
+        {phase === 'projetor' && <ProjetorModal state={setup} onChange={setSetup} onClose={closeProjector} />}
         {phase === 'dreamP5' && (
           <SonhoOverlay heading={MISSAO_BANHEIRO.dreamHeading} game={bathroomWordSearch ?? CACA_PALAVRAS_BANHEIRO_PADRAO} onClose={finishDream} />
         )}

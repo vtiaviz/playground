@@ -103,7 +103,8 @@ export default function OfficePage() {
             lista do Marcos, as palavras-cruzadas do tablet da Rita, na Copa, a montagem de 3 computadores (estudante, gamer
             e escritório) na Sala de TI, o quiz da reunião de alinhamento, no notebook da Sala de Reuniões, e a corrida
             contra o relógio até o banheiro, com o caça-palavras sonhado em frente ao mictório. No fim, todos vão embora e
-            aparece o resumo do 3º dia.
+            aparece o resumo do 3º dia. No 4º dia (fase 4), o Marcos faltou e o estagiário instala o projetor e a webcam da
+            Sala de Reuniões para a vídeo chamada do chefe.
           </p>
         </div>
         <GamePicker

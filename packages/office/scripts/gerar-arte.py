@@ -8,6 +8,7 @@ Saídas (já vêm prontas no repositório; rode de novo só se mudar algo aqui):
   src/assets/equipamentos/    imagens grandes dos computadores (modal do levantamento, fase 2)
   src/assets/placas/          imagens grandes das placas Arduino e Raspberry Pi (fase 2, missão 3)
   src/assets/montar/          bancada de montagem, gabinetes e peças encaixadas (fase 3, missão 3)
+  src/assets/projetor/        mesa da Sala de Reuniões com notebook, projetor, webcam e cabos (fase 4, missão 1)
   src/game/office-map.json    grade de tiles, móveis, salas e áreas de colisão
 
 Uso (precisa de Python 3 + Pillow):  python3 packages/office/scripts/gerar-arte.py
@@ -15,6 +16,7 @@ Uso (precisa de Python 3 + Pillow):  python3 packages/office/scripts/gerar-arte.
 Tudo é desenhado em "pixels de arte" e salvo ampliado 2x, então 1 pixel de arte = 2 px no jogo.
 """
 import json
+import math
 import os
 from PIL import Image
 
@@ -2213,7 +2215,6 @@ def big_cooler():
     c.rect(fx - r, fy - r, 2 * r, 2 * r, DARK)  # moldura da ventoinha
     disc(c, fx, fy, r - 2, '#1a1d23')
     for a in range(0, 360, 60):  # pás
-        import math
         for t in range(4, r - 3):
             px = fx + int(round(math.cos(math.radians(a + t * 3)) * t))
             py = fy + int(round(math.sin(math.radians(a + t * 3)) * t))
@@ -2261,7 +2262,6 @@ def big_gpu(fans):
         cx = x + 13 + k * 19
         disc(c, cx, y + 15, 9, '#1a1d23')
         for a in range(0, 360, 72):
-            import math
             for t in range(3, 8):
                 c.p(cx + int(round(math.cos(math.radians(a + t * 8)) * t)), y + 15 + int(round(math.sin(math.radians(a + t * 8)) * t)), '#5a616d')
         disc(c, cx, y + 15, 2, DARK_L)
@@ -2499,7 +2499,6 @@ def cpu_layer():
 
 
 def cooler_layer():
-    import math
     c = layer()
     x, y, w, h = MONTAR['slots']['cooler']
     c.rect(x, y, w, h, METAL)
@@ -2640,6 +2639,229 @@ def make_montar():
 
 
 
+# ---------------------------------------------------------------- fase 4, missão 1: projetor e webcam na Sala de Reuniões
+# Camadas do tamanho da cena (200 x 130 pixels de arte, salvas ampliadas 4x): a parede com a tela de projeção e a
+# tomada, a mesa de reunião com o notebook (tela virada para o ESTAGIÁRIO) e, por cima, o projetor, a webcam e os
+# rolos dos cabos. As áreas de encaixe, as entradas e as pontas dos cabos vão para projetor/cena.json.
+
+PW, PH = 200, 130
+PROJETOR = {
+    'slots': {'projetor': [116, 74, 46, 26], 'webcam': [42, 43, 14, 8]},
+    'table': [0, 70, 200, 56],
+    'ports': {
+        'nb-usb': [17, 93], 'nb-hdmi': [81, 90], 'nb-vga': [82, 95],
+        'pj-vga': [127, 91], 'pj-hdmi': [136, 91], 'pj-power': [153, 91],
+        'tomada': [183, 61],
+    },
+    'plugs': {
+        'vga-a': [90, 114], 'vga-b': [110, 114],
+        'forca-plugue': [163, 115], 'forca-conector': [181, 115],
+        'webcam-usb': [8, 108],
+    },
+    # de onde sai o cabo de cada coisa (meio do rolo do cabo, ou o corpo da webcam)
+    'anchors': {'vga': [100, 109], 'forca': [172, 110], 'webcam': [49, 47]},
+    'screen': [25, 53, 48, 30],
+    'wall': [64, 8, 72, 45],
+    'lens': [139, 76],
+    'power': [69, 88, 5, 2],
+}
+
+
+def proj_layer():
+    return Canvas(PW, PH)
+
+
+def proj_room():
+    """Parede da Sala de Reuniões com a tela de projeção e a tomada; a mesa com o notebook aberto, tela desligada."""
+    c = proj_layer()
+    for y in range(0, 66):  # parede
+        for x in range(PW):
+            c.p(x, y, '#d9c7a6' if noise(x, y, 6) > 0.15 else '#d1be9b')
+    c.rect(0, 66, PW, 4, '#8a5a34')  # rodapé
+    c.hline(0, 66, PW, '#a8714a')
+    # tela de projeção (de enrolar): caixa em cima e o tecido branco
+    c.rect(56, 2, 88, 4, '#5f6775')
+    c.hline(56, 2, 88, '#8c95a3')
+    c.rect(59, 6, 82, 52, '#f4f5f7')
+    c.rect(59, 6, 82, 1, '#c9ced6')
+    c.vline(140, 6, 52, '#d5d9e0')
+    c.rect(59, 57, 82, 2, '#2b2f37')  # barra de baixo
+    c.rect(98, 59, 4, 3, '#2b2f37')  # puxador
+    # tomada na parede
+    c.rect(178, 56, 11, 10, '#f4f5f7')
+    c.hline(178, 65, 11, '#c9ced6')
+    c.rect(181, 59, 5, 5, '#e1e4e9')
+    c.p(182, 61, '#2b2f37')
+    c.p(184, 61, '#2b2f37')
+    c.p(183, 62, '#2b2f37')
+    # mesa de reunião (tampo visto de cima, na frente)
+    for y in range(70, 118):
+        for x in range(PW):
+            c.p(x, y, WOOD if noise(x // 3, y, 11) > 0.2 else '#9c6236')
+    for x in range(0, PW, 17):
+        c.hline(x, 74 + (x // 17) % 5 * 9, 9, '#9c6236')
+    c.hline(0, 70, PW, WOOD_L)
+    c.rect(0, 118, PW, 8, WOOD_D)
+    c.hline(0, 125, PW, WOOD_DD)
+    c.rect(0, 126, PW, 4, '#2a646c')  # carpete
+    # notebook aberto, com a tela virada para cá
+    c.rect(22, 50, 54, 36, '#2b2f37')
+    c.hline(22, 50, 54, '#4a505c')
+    c.rect(25, 53, 48, 30, '#0d0f13')
+    c.p(48, 51, '#4a505c')  # lugar da câmera embutida (quebrada)
+    for k in range(12):  # base com o teclado, em perspectiva
+        c.hline(20 - k // 4, 86 + k, 58 + k // 2, '#3a3f49' if k else '#4a505c')
+    for row in range(3):
+        for kx in range(24 + row, 72 - row, 3):
+            c.hline(kx, 88 + row * 2, 2, '#23262d')
+    c.rect(41, 94, 16, 3, '#2f333c')  # touchpad
+    c.hline(16, 97, 64, '#1f2228')
+    c.rect(69, 88, 5, 2, '#5f6775')  # botão de ligar
+    # entradas nas laterais da base: USB à esquerda; HDMI e VGA à direita
+    c.rect(15, 92, 3, 2, '#9aa1ab')
+    c.rect(79, 89, 3, 2, '#2b2f37')
+    c.p(80, 89, '#e5c34a')
+    c.rect(79, 94, 4, 3, '#2f5f9e')
+    # celular e papéis esquecidos na mesa
+    c.rect(186, 76, 6, 10, '#1d2027')
+    c.rect(187, 77, 4, 7, '#3f8fd6')
+    c.rect(4, 74, 12, 9, '#f4f1e8')
+    c.hline(6, 76, 8, '#c9c3b4')
+    c.hline(6, 78, 6, '#c9c3b4')
+    return c
+
+
+def proj_projector():
+    """Projetor na mesa, visto por trás: o tampo com o anel de foco e as entradas VGA, HDMI e de energia."""
+    c = proj_layer()
+    x, y, w, h = PROJETOR['slots']['projetor']
+    c.rect(x + 2, y + 2, w - 4, 9, '#e6e9ee')  # tampo
+    c.hline(x + 2, y + 2, w - 4, '#ffffff')
+    disc(c, x + 23, y + 3, 3, '#4a505c')  # lente (virada para a parede)
+    disc(c, x + 23, y + 3, 2, '#2b2f37')
+    c.rect(x + 2, y + 11, w - 4, 13, '#c9ced6')  # traseira
+    c.hline(x + 2, y + 11, w - 4, '#b4bcc8')
+    for vx in range(x + 30, x + 42, 2):  # ventilação
+        c.vline(vx, y + 13, 5, '#9aa1ab')
+    c.rect(x + 9, y + 15, 6, 4, '#2f5f9e')  # VGA
+    c.hline(x + 10, y + 16, 4, '#5f86c8')
+    c.rect(x + 18, y + 16, 5, 2, '#2b2f37')  # HDMI
+    c.p(x + 20, y + 16, '#e5c34a')
+    c.rect(x + 34, y + 15, 6, 5, '#2b2f37')  # energia
+    c.rect(x + 35, y + 16, 4, 3, '#4a505c')
+    c.rect(x + 4, y + 24, 4, 2, '#4a505c')  # pezinhos
+    c.rect(x + w - 8, y + 24, 4, 2, '#4a505c')
+    c.rect(x + 4, y + 13, 3, 2, '#5f6775')  # botão (liga junto com o notebook)
+    return c.outline()
+
+
+def proj_webcam():
+    """Webcam presa em cima da tela do notebook."""
+    c = proj_layer()
+    x, y, w, h = PROJETOR['slots']['webcam']
+    c.rect(x + 1, y, w - 2, 5, '#1d2027')
+    c.hline(x + 1, y, w - 2, '#3a3f49')
+    disc(c, x + 7, y + 2, 2, '#3a3f49')
+    c.p(x + 7, y + 2, '#3f8fd6')
+    c.p(x + 11, y + 1, '#4ade80')
+    c.rect(x + 4, y + 5, 6, 3, '#2b2f37')  # presilha
+    return c.outline()
+
+
+def proj_coil(kind):
+    """Rolo do cabo em cima da mesa: VGA azul ou de força preto."""
+    c = proj_layer()
+    cx, cy = PROJETOR['anchors'][kind]
+    col, col_l = ('#2f5f9e', '#5f86c8') if kind == 'vga' else ('#23262d', '#4a505c')
+    for r in (6, 4):
+        for a in range(0, 360, 3):
+            c.rect(cx + round(r * 1.6 * math.cos(math.radians(a))), cy + round(r * 0.7 * math.sin(math.radians(a))), 2, 1, col)
+    c.hline(cx - 6, cy - 4, 6, col_l)
+    return c
+
+
+def proj_icon(kind):
+    """Desenhos da caixa (80 x 56)."""
+    c = Canvas(80, 56)
+    if kind == 'projetor':
+        c.rect(14, 18, 52, 26, '#e6e9ee')
+        c.hline(14, 18, 52, '#ffffff')
+        c.rect(14, 38, 52, 6, '#c9ced6')
+        disc(c, 30, 31, 8, '#4a505c')
+        disc(c, 30, 31, 6, '#2b2f37')
+        disc(c, 30, 31, 3, '#3f8fd6')
+        c.p(28, 29, '#bfe6ff')
+        for vx in range(46, 62, 3):
+            c.vline(vx, 24, 10, '#9aa1ab')
+        c.rect(18, 44, 6, 3, '#4a505c')
+        c.rect(56, 44, 6, 3, '#4a505c')
+    elif kind == 'webcam':
+        c.rect(22, 16, 36, 20, '#1d2027')
+        c.hline(22, 16, 36, '#3a3f49')
+        disc(c, 40, 26, 7, '#3a3f49')
+        disc(c, 40, 26, 4, '#0d0f13')
+        disc(c, 40, 26, 2, '#3f8fd6')
+        c.p(52, 20, '#4ade80')
+        c.rect(34, 36, 12, 8, '#2b2f37')
+        c.rect(30, 44, 20, 3, '#2b2f37')
+        c.rect(58, 26, 10, 2, '#4a505c')  # cabo
+        c.rect(68, 24, 6, 6, '#9aa1ab')  # plugue USB
+    else:
+        col, col_l = ('#2f5f9e', '#5f86c8') if kind == 'vga' else ('#23262d', '#4a505c')
+        for r in (14, 11, 8):
+            for a in range(0, 360, 3):
+                c.rect(40 + round(r * 1.3 * math.cos(math.radians(a))), 28 + round(r * 0.9 * math.sin(math.radians(a))), 2, 2, col)
+        c.hline(26, 16, 10, col_l)
+        if kind == 'vga':
+            for px_, flip in ((6, False), (62, True)):
+                c.rect(px_, 22, 12, 10, '#2f5f9e')
+                c.rect(px_ + 2, 24, 8, 6, '#c9ced6')
+                for k in range(3):
+                    c.hline(px_ + 3, 25 + k * 2, 6, '#5f6775')
+        else:
+            c.rect(4, 22, 12, 12, '#23262d')  # plugue de tomada
+            c.rect(6, 34, 2, 5, '#c9ced6')
+            c.rect(12, 34, 2, 5, '#c9ced6')
+            c.rect(64, 22, 12, 12, '#23262d')  # conector do projetor
+            c.rect(66, 25, 8, 6, '#4a505c')
+            for k in range(3):
+                c.rect(67 + k * 2, 27, 1, 2, '#c9ced6')
+    return c.outline()
+
+
+def proj_webcam_picture():
+    """O que a webcam filma: o ESTAGIÁRIO na Sala de Reuniões, com o quadro branco atrás (32 x 20, salva 8x)."""
+    c = Canvas(32, 20)
+    for y in range(20):
+        for x in range(32):
+            c.p(x, y, '#d9c7a6' if noise(x, y, 12) > 0.15 else '#d1be9b')
+    c.rect(1, 2, 9, 7, '#f7f8fa')  # quadro branco
+    c.hline(2, 4, 5, '#2f5f9e')
+    c.hline(2, 6, 4, '#c0392b')
+    c.rect(24, 1, 6, 8, '#7fb7c9')  # janela
+    c.vline(27, 1, 8, '#5c6b78')
+    draw_body_front(c, 11, 14, ESTAGIARIO, 0, 0)
+    draw_head(c, 11, 4, ESTAGIARIO, 'down')
+    return c
+
+
+def make_projetor():
+    out = os.path.join(ASSETS, 'projetor')
+    os.makedirs(out, exist_ok=True)
+    layers = {
+        'sala': proj_room(), 'projetor': proj_projector(), 'webcam': proj_webcam(),
+        'vga': proj_coil('vga'), 'forca': proj_coil('forca'),
+        'projetor-icone': proj_icon('projetor'), 'webcam-icone': proj_icon('webcam'),
+        'vga-icone': proj_icon('vga'), 'forca-icone': proj_icon('forca'),
+    }
+    for name, cv in layers.items():
+        cv.im.resize((cv.w * BIG, cv.h * BIG), Image.NEAREST).save(os.path.join(out, f'{name}.png'), optimize=True)
+    pic = proj_webcam_picture()
+    pic.im.resize((pic.w * 8, pic.h * 8), Image.NEAREST).save(os.path.join(out, 'webcam-imagem.png'), optimize=True)
+    with open(os.path.join(out, 'cena.json'), 'w') as f:
+        json.dump({'w': PW, 'h': PH, **PROJETOR}, f, indent=1)
+
+
 def build():
     os.makedirs(ASSETS, exist_ok=True)
     make_tiles()
@@ -2650,6 +2872,7 @@ def build():
     make_placas()
     make_pecas()
     make_montar()
+    make_projetor()
 
     # tipos de móvel: (canvas, área de colisão em px de arte relativa ao canto do sprite, camada)
     #   camada "wall" = pendurado na parede (sem colisão, fica atrás de tudo)
