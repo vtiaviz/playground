@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import type { GameResult } from '@playground/games';
 import { createOfficeGame, getOfficeScene } from './game/createGame';
-import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
+import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_RITA_WAIT, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
 import { OFFICE_EVENTS, RH_LOOK } from './game/OfficeScene';
 import AlarmPanel from './mission/AlarmPanel';
 import CelularOverlay from './mission/CelularOverlay';
@@ -25,10 +25,12 @@ import { BOARD_TOTAL, boardById, BOARDS, checkDelivery, HIDEOUTS, type BoardMode
 import {
   CACA_PALAVRAS_PADRAO,
   CRUZADAS_PADRAO,
+  CRUZADAS_RITA_PADRAO,
   FORCA_PADRAO,
   FRASES_PADRAO,
   MISSAO_CACA,
   MISSAO_CEO,
+  MISSAO_CRUZADAS_RITA,
   MISSAO_EXERCICIO,
   FIM_DIA2,
   MISSAO_FIM,
@@ -81,7 +83,9 @@ export interface OfficeGameProps {
   hangman?: MissionGame | null;
   /** Quiz do exercício surpresa do curso, que chega pelo celular, fase 2, missão 5 (padrão: um de exemplo sobre o dia). */
   surpriseQuiz?: MissionGame | null;
-  /** Para testes: começa direto na missão 2 a 6 da fase 1, ou na 2 a 5 da fase 2 (6 = fim do 2º dia; as anteriores contam como feitas). */
+  /** Palavras-cruzadas do tablet da Rita, fase 3, missão 2 (padrão: uma de exemplo com as peças do computador). */
+  ritaCrossword?: MissionGame | null;
+  /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 da fase 3 (as anteriores contam como feitas). */
   startAt?: 1 | 2 | 3 | 4 | 5 | 6;
   /** Começa no 1º dia (fase 1, padrão) ou direto no 2º ou 3º dia (com o XP dos dias anteriores sem erros). */
   fase?: 1 | 2 | 3;
@@ -115,7 +119,9 @@ type Phase =
   | 'placa'
   | 'hangman'
   | 'phone'
-  | 'peca';
+  | 'peca'
+  | 'askP2'
+  | 'crosswordP2';
 /** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
 type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
@@ -128,6 +134,8 @@ type Fase2M4 = 'off' | 'resting' | 'crashed' | 'playing' | 'escaping' | 'done';
 type Fase2M5 = 'off' | 'ringing' | 'pending' | 'done';
 /** Fase 3, missão 1: Marcos chamou, procurando as peças, conferindo, concluída. */
 type Fase3M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
+/** Fase 3, missão 2: com sede (indo à Copa), a Rita correu atrás dele, esperando na Copa (não ajudou ainda), concluída. */
+type Fase3M2 = 'off' | 'thirsty' | 'met' | 'waiting' | 'done';
 /** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
 type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
 /** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
@@ -212,6 +220,7 @@ function OfficeDay({
   wordSearch,
   hangman,
   surpriseQuiz,
+  ritaCrossword,
   missionTime = MISSAO_PCS.tempo,
   startAt = 1,
   fase = 1,
@@ -342,6 +351,13 @@ function OfficeDay({
   const setP1 = (v: Fase3M1) => {
     p1Ref.current = v;
     setP1State(v);
+  };
+  // fase 3, missão 2
+  const [p2, setP2State] = useState<Fase3M2>('off');
+  const p2Ref = useRef<Fase3M2>('off');
+  const setP2 = (v: Fase3M2) => {
+    p2Ref.current = v;
+    setP2State(v);
   };
   /** Mochila (uma peça de cada tipo) e os itens da lista que o Marcos já recebeu certos. */
   const [bag, setBagState] = useState<Bag>({});
@@ -1639,7 +1655,18 @@ function OfficeDay({
     s.setCeoTalk(false);
     s.setCeoMood('tranquilo');
     RH_STATIONS.forEach((st) => s.setRhStation(st.index, { built: true, boxOpen: true }));
+    // a Rita passa o dia no RH, fazendo palavras-cruzadas no tablet
+    s.rhPlace(RH_WAIT, 'down');
+    s.setRhTablet(true);
     setToast(MISSAO_PECAS.dayStart);
+    if (startAt === 2) {
+      // para testes: a missão 1 conta como feita (e entra no resumo do dia)
+      xpLog.current = [{ mission: MISSAO_PECAS.id, title: MISSAO_PECAS.title, xp: MISSAO_PECAS.xp }];
+      setXpTo(startXp + MISSAO_PECAS.xp);
+      setP1('done');
+      void startF3M2();
+      return;
+    }
     await new Promise((r) => window.setTimeout(r, 2500));
     await whenFree();
     const sc = scene();
@@ -1655,6 +1682,10 @@ function OfficeDay({
 
   const onSpotP1 = (id: string) => {
     if (phaseRef.current !== 'explore') return;
+    if (id === 'rita') {
+      talkToRita();
+      return;
+    }
     const s = scene();
     if (!s) return;
     if (id === 'marcos') {
@@ -1786,6 +1817,103 @@ function OfficeDay({
         if (!alive.current) return;
         backToExplore();
         onMissionComplete?.({ missionId: MISSAO_PECAS.id, xp: MISSAO_PECAS.xp, success: true });
+        void startF3M2();
+      },
+    );
+  };
+
+
+  // ------------------------------------------------------------ fase 3, missão 2: as palavras-cruzadas da Rita
+
+  /** Depois das peças: o ESTAGIÁRIO fica com sede e quer ir até a Copa. */
+  const startF3M2 = async () => {
+    await new Promise((r) => window.setTimeout(r, 1200));
+    await whenFree();
+    if (!alive.current) return;
+    say([me(MISSAO_CRUZADAS_RITA.thirsty, { continueLabel: 'Ir até a Copa' })], () => {
+      setP2('thirsty');
+      backToExplore();
+      if (roomRef.current?.id === 'copa') void ritaRuns();
+    });
+  };
+
+  /** Entrou na Copa: a Rita vem correndo do RH, o ESTAGIÁRIO leva um susto e ela pede ajuda. */
+  const ritaRuns = async () => {
+    const s = scene();
+    if (!s) return;
+    setP2('met');
+    s.setFrozen(true);
+    setPhase('dialog');
+    setToast(MISSAO_CRUZADAS_RITA.shout);
+    const run = s.rhRunToPlayer();
+    await new Promise((r) => window.setTimeout(r, 700));
+    if (!alive.current) return;
+    await s.startle();
+    await run;
+    if (!alive.current) return;
+    say(
+      [
+        me(MISSAO_CRUZADAS_RITA.startled),
+        rita(MISSAO_CRUZADAS_RITA.sorry),
+        me(MISSAO_CRUZADAS_RITA.calm),
+        rita(MISSAO_CRUZADAS_RITA.plea),
+      ],
+      askRita,
+    );
+  };
+
+  const askRita = () => {
+    scene()?.setFrozen(true);
+    placeBalloon();
+    setPhase('askP2');
+  };
+
+  /** Não ajudou (ou desistiu): a Rita fica esperando na Copa, com o tablet e o "!". Falar com ela de novo recomeça. */
+  const ritaWaits = () => {
+    setP2('waiting');
+    backToExplore();
+    const s = scene();
+    if (!s) return;
+    s.setSpots([]);
+    void s.rhWaitWithTablet(COPA_RITA_WAIT, true).then(() => {
+      if (p2Ref.current !== 'waiting') return;
+      const at = scene()?.rhAt() ?? COPA_RITA_WAIT;
+      scene()?.setSpots([{ id: 'rita', zone: { x: at.x - 44, y: at.y - 24, w: 88, h: 56 } }]);
+    });
+  };
+
+  const talkToRita = () => {
+    if (p2Ref.current !== 'waiting' || phaseRef.current !== 'explore') return;
+    scene()?.setSpots([]);
+    say([rita(MISSAO_CRUZADAS_RITA.again)], askRita);
+  };
+
+  const finishRitaCrossword = (result: GameResult | null) => {
+    if (!result) {
+      say([rita(MISSAO_CRUZADAS_RITA.gaveUp)], ritaWaits);
+      return;
+    }
+    const s = scene();
+    s?.setSpots([]);
+    s?.setRhTablet(false);
+    addXp(MISSAO_CRUZADAS_RITA, MISSAO_CRUZADAS_RITA.xp);
+    setP2('done');
+    say(
+      [
+        rita(MISSAO_CRUZADAS_RITA.success, { badge: `+${MISSAO_CRUZADAS_RITA.xp} XP · Missão concluída!` }),
+        me(MISSAO_CRUZADAS_RITA.water, { continueLabel: 'Beber água' }),
+      ],
+      async () => {
+        const sc = scene();
+        if (!sc) return;
+        sc.setFrozen(true);
+        setPhase('dialog');
+        void sc.rhWalkTo(RH_WAIT, 'down').then(() => scene()?.setRhTablet(true));
+        await sc.drinkWater();
+        if (!alive.current) return;
+        setToast(MISSAO_CRUZADAS_RITA.drink);
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_CRUZADAS_RITA.id, xp: MISSAO_CRUZADAS_RITA.xp, success: true, game: result });
       },
     );
   };
@@ -1861,6 +1989,7 @@ function OfficeDay({
       if (r?.id === 'reunioes' && m4Ref.current === 'called' && phaseRef.current === 'explore') meetBruno();
       if (r?.id === 'reunioes' && f2bRef.current === 'called' && phaseRef.current === 'explore') meetDiego();
       if (r?.id === 'copa' && m5Ref.current === 'called' && phaseRef.current === 'explore') meetElisa();
+      if (r?.id === 'copa' && p2Ref.current === 'thirsty' && phaseRef.current === 'explore') void ritaRuns();
       if (r?.id === 'entrada' && m6Ref.current === 'armed') void lockUp();
       if (r?.id === 'entrada' && fEndRef.current === 'leaving') void leaveDay2();
     },
@@ -1870,7 +1999,17 @@ function OfficeDay({
   // ------------------------------------------------------------ tela
 
   let objective: { title: string; text: string; done: boolean };
-  if (fase === 3) {
+  if (fase === 3 && p2 !== 'off') {
+    if (p2 === 'done')
+      objective = { title: 'Missão concluída:', text: `${MISSAO_CRUZADAS_RITA.title} (+${MISSAO_CRUZADAS_RITA.xp} XP). Explore o escritório à vontade.`, done: true };
+    else if (p2 === 'thirsty') objective = { title: 'Fase 3 · Missão 2:', text: OBJETIVOS.copaAgua, done: false };
+    else
+      objective = {
+        title: `Fase 3 · Missão 2: ${MISSAO_CRUZADAS_RITA.title}.`,
+        text: p2 === 'waiting' ? OBJETIVOS.ritaCruzadas : 'A Rita quer falar com você…',
+        done: false,
+      };
+  } else if (fase === 3) {
     const title = `Fase 3 · Missão 1: ${MISSAO_PECAS.title}.`;
     if (p1 === 'done') objective = { title: 'Missão concluída:', text: `${MISSAO_PECAS.title} (+${MISSAO_PECAS.xp} XP). Explore o escritório à vontade.`, done: true };
     else if (p1 === 'working')
@@ -2174,6 +2313,26 @@ function OfficeDay({
         )}
         {phase === 'peca' && held && (
           <PecaNaMao key={held.part?.id ?? 'lista'} part={held.part} bag={bag} delivered={delivered} onStore={storePart} onLeave={leavePart} />
+        )}
+        {phase === 'askP2' && (
+          <ChoiceBalloon
+            text={MISSAO_CRUZADAS_RITA.question}
+            at={balloonAt}
+            onChoose={(yes) => {
+              if (yes) setPhase('crosswordP2');
+              else say([rita(MISSAO_CRUZADAS_RITA.declined)], ritaWaits);
+            }}
+          />
+        )}
+        {phase === 'crosswordP2' && (
+          <TabletOverlay
+            heading="Palavras-cruzadas da Rita"
+            game={ritaCrossword ?? CRUZADAS_RITA_PADRAO}
+            gameType="CRUZADAS"
+            holder="estagiario"
+            doneLabel="Devolver o tablet"
+            onClose={finishRitaCrossword}
+          />
         )}
         {phase === 'phone' && (
           <CelularOverlay
