@@ -7,6 +7,7 @@ Saídas (já vêm prontas no repositório; rode de novo só se mudar algo aqui):
   src/assets/estagiario.png   o ESTAGIÁRIO: andando para baixo, para cima e de lado
   src/assets/equipamentos/    imagens grandes dos computadores (modal do levantamento, fase 2)
   src/assets/placas/          imagens grandes das placas Arduino e Raspberry Pi (fase 2, missão 3)
+  src/assets/montar/          bancada de montagem, gabinetes e peças encaixadas (fase 3, missão 3)
   src/game/office-map.json    grade de tiles, móveis, salas e áreas de colisão
 
 Uso (precisa de Python 3 + Pillow):  python3 packages/office/scripts/gerar-arte.py
@@ -2171,6 +2172,296 @@ def make_placas():
     for name, cv in imgs.items():
         cv.im.resize((cv.w * BIG, cv.h * BIG), Image.NEAREST).save(os.path.join(out, f'{name}.png'), optimize=True)
 
+# ---------------------------------------------------------------- fase 3, missão 3: a bancada de montagem
+# Tudo em "camadas" do tamanho da bancada (200 x 120 pixels de arte, salvas ampliadas 4x): o React empilha a mesa, o
+# gabinete e cada peça encaixada. As áreas de encaixe e as portas dos cabos vão para montar/bancada.json.
+
+BW, BH = 200, 120
+MONTAR = {
+    'slots': {
+        'gabinete': [14, 4, 118, 88],
+        'placa-mae': [22, 10, 62, 62],
+        'processador': [42, 24, 14, 14],
+        'cooler': [39, 21, 20, 20],
+        'ram-0': [63, 13, 4, 32],
+        'ram-1': [69, 13, 4, 32],
+        'placa-video': [24, 49, 58, 11],
+        'fonte': [20, 74, 44, 16],
+        'hd': [94, 50, 22, 12],
+        'ssd': [96, 70, 18, 8],
+    },
+    'ports': {
+        'psu-24': [68, 76], 'psu-sata-0': [68, 80], 'psu-sata-1': [68, 84], 'psu-pcie': [68, 88],
+        'mb-24': [80, 24], 'mb-sata-0': [80, 60], 'mb-sata-1': [80, 66],
+        'hd-power': [95, 53], 'hd-data': [95, 59],
+        'ssd-power': [97, 72], 'ssd-data': [97, 76],
+        'gpu-power': [76, 51],
+    },
+    'power': [121, 8, 8, 7],
+    'screen': [145, 35, 46, 31],
+}
+
+
+def layer():
+    return Canvas(BW, BH)
+
+
+def bench_bg():
+    """A mesa da Sala de TI com o monitor desligado (o gabinete entra por cima)."""
+    c = layer()
+    for y in range(0, 84):  # parede
+        for x in range(BW):
+            c.p(x, y, '#e9dfc9' if (x // 8 + y // 8) % 2 or noise(x, y, 7) > 0.08 else '#e2d6bd')
+    c.hline(0, 83, BW, '#cbbd9f')
+    c.rect(0, 84, BW, 12, '#b9824a')  # tampo
+    for x in range(0, BW, 13):
+        c.hline(x, 86 + (x // 13) % 3 * 3, 7, '#a8733f')
+    c.hline(0, 84, BW, '#d29a5c')
+    c.rect(0, 96, BW, 8, '#8a5a2e')  # borda da frente
+    c.hline(0, 103, BW, '#6b4422')
+    c.rect(0, 104, BW, 16, '#5b6270')  # chão
+    c.rect(6, 104, 8, 16, '#6b4422')  # pernas
+    c.rect(BW - 14, 104, 8, 16, '#6b4422')
+    # monitor
+    c.rect(140, 30, 56, 41, '#23262d')
+    c.hline(140, 30, 56, '#3a3f49')
+    c.rect(145, 35, 46, 31, '#0d0f13')
+    c.p(193, 68, '#3a3f49')
+    c.rect(164, 71, 8, 9, '#2b2f37')
+    c.rect(154, 80, 28, 5, '#23262d')
+    c.hline(154, 80, 28, '#3a3f49')
+    # teclado e mouse
+    c.rect(141, 89, 36, 5, '#2b2f37')
+    for k in range(143, 175, 3):
+        c.hline(k, 90, 2, '#4a505c')
+        c.hline(k + 1, 92, 2, '#4a505c')
+    c.rect(182, 89, 6, 5, '#2b2f37')
+    c.p(184, 89, '#4a505c')
+    return c
+
+
+def case_layer(gamer):
+    """Gabinete deitado de lado, sem a tampa: a chapa do fundo, a baia dos discos e o botão de ligar."""
+    c = layer()
+    x, y, w, h = MONTAR['slots']['gabinete']
+    frame, frame_l, plate = ('#2b2e36', '#40444f', '#1d2026') if gamer else ('#c3c9d1', '#dfe4ea', '#6b7380')
+    c.rect(x, y, w, h, frame)
+    c.hline(x, y, w, frame_l)
+    c.rect(x + 3, y + 3, w - 18, h - 6, plate)  # chapa do fundo
+    for yy in range(y + 6, y + h - 6, 6):  # furinhos de ventilação na chapa
+        for xx in range(x + 6, x + w - 20, 6):
+            c.p(xx, yy, '#5a616d' if not gamer else '#2a2e36')
+    c.rect(x + 3, y + 8, 4, 26, '#4a505c' if not gamer else '#14161a')  # recorte traseiro (conectores)
+    # frente (lado direito): baias dos discos e o painel
+    c.rect(x + w - 15, y, 15, h, frame_l if not gamer else '#22252c')
+    c.rect(92, 46, 26, 44, '#8a929c' if not gamer else '#30343d')  # gaiola dos discos
+    c.rect(93, 48, 24, 16, '#5f6775' if not gamer else '#1d2026')  # baia de 3,5"
+    c.rect(95, 68, 20, 12, '#5f6775' if not gamer else '#1d2026')  # baia de 2,5"
+    for yy in (52, 58, 72):
+        c.p(116, yy, METAL_L)
+    px, py, pw, ph = MONTAR['power']
+    c.rect(px, py, pw, ph, '#1a1d23')  # botão de ligar
+    disc(c, px + 4, py + 3, 2, '#5a616d')
+    c.p(px + 4, py + 1, '#cfd5dd')
+    c.rect(x + w - 10, y + 20, 4, 1, '#1a1d23')  # led
+    if gamer:  # fita de LED na frente e duas ventoinhas com anel colorido
+        for k in range(h - 8):
+            c.p(x + w - 2, y + 4 + k, ('#a855f7', '#22d3ee', '#ec4899')[(k // 10) % 3])
+        for fy in (y + 30, y + 52):
+            disc(c, x + w - 8, fy, 5, '#22d3ee')
+            disc(c, x + w - 8, fy, 4, '#111318')
+            c.p(x + w - 8, fy, '#5a616d')
+    return c.outline()
+
+
+def mobo_layer():
+    c = layer()
+    x, y, w, h = MONTAR['slots']['placa-mae']
+    c.rect(x, y, w, h, '#25603f')
+    c.hline(x, y, w, '#357a52')
+    screws(c, x, y, w, h, '#c9b16a')
+    c.rect(x + 1, y + 2, 6, 22, METAL_D)  # conectores traseiros
+    c.rect(x + 2, y + 4, 4, 3, CHIP)
+    c.rect(x + 2, y + 10, 4, 3, '#3a6fd8')
+    c.rect(x + 2, y + 16, 4, 3, CHIP)
+    sx, sy, sw, sh = MONTAR['slots']['processador']
+    c.rect(sx - 1, sy - 1, sw + 2, sh + 2, METAL)  # soquete
+    c.rect(sx + 1, sy + 1, sw - 2, sh - 2, '#d9d0b0')
+    for k in range(0, sw - 2, 2):
+        for j in range(0, sh - 2, 2):
+            c.p(sx + 1 + k, sy + 1 + j, '#b7a777')
+    for slot in ('ram-0', 'ram-1'):  # slots de memória
+        rx, ry, rw, rh = MONTAR['slots'][slot]
+        c.rect(rx + 1, ry + 1, 2, rh - 2, CHIP)
+        c.p(rx + 1, ry, '#e8e8e8')
+        c.p(rx + 1, ry + rh - 1, '#e8e8e8')
+    c.rect(78, 18, 4, 12, CHIP)  # entrada de energia de 24 pinos
+    for k in range(19, 29, 2):
+        c.p(79, k, '#5a616d')
+    c.rect(26, 52, 40, 3, CHIP)  # slot PCI Express x16
+    c.hline(26, 53, 40, '#5a616d')
+    c.rect(52, 40, 8, 8, CHIP)  # chipset
+    c.rect(77, 58, 5, 4, CHIP)  # portas SATA
+    c.rect(77, 64, 5, 4, CHIP)
+    c.p(78, 59, '#e0413a')
+    c.p(78, 65, '#e0413a')
+    c.rect(x + 3, y + h - 8, 18, 5, LABEL)  # adesivo
+    return c.outline()
+
+
+def cpu_layer():
+    c = layer()
+    x, y, w, h = MONTAR['slots']['processador']
+    c.rect(x, y, w, h, '#3b5f8f')
+    c.rect(x + 2, y + 2, w - 4, h - 4, METAL)
+    c.hline(x + 2, y + 2, w - 4, METAL_L)
+    c.vline(x + 2, y + 2, h - 4, METAL_L)
+    for k in range(3):
+        c.hline(x + 1, y + h - 2 - k, 3 - k, GOLD)
+    return c.outline()
+
+
+def cooler_layer():
+    import math
+    c = layer()
+    x, y, w, h = MONTAR['slots']['cooler']
+    c.rect(x, y, w, h, METAL)
+    for k in range(x, x + w, 2):
+        c.vline(k, y, h, METAL_D)
+    c.rect(x + 1, y + 1, w - 2, h - 2, DARK)
+    cx, cy, r = x + w // 2, y + h // 2, w // 2 - 2
+    disc(c, cx, cy, r, '#1a1d23')
+    for a in range(0, 360, 60):
+        for t in range(2, r):
+            c.p(cx + int(round(math.cos(math.radians(a + t * 9)) * t)), cy + int(round(math.sin(math.radians(a + t * 9)) * t)), '#5a616d')
+    disc(c, cx, cy, 2, DARK_L)
+    return c.outline()
+
+
+def ram_layer(slot, gamer):
+    c = layer()
+    x, y, w, h = MONTAR['slots'][slot]
+    if gamer:  # dissipador com o topo colorido
+        c.rect(x, y, w, h, '#2b2f37')
+        c.rect(x, y, w, 3, '#a855f7')
+        for k in range(y + 5, y + h - 2, 4):
+            c.hline(x, k, w, '#454b57')
+    else:
+        c.rect(x, y, w, h, PCB)
+        for k in range(y + 2, y + h - 2, 5):
+            c.rect(x + 1, k, w - 2, 3, CHIP)
+    c.p(x, y + h - 1, GOLD)
+    c.p(x + w - 1, y + h - 1, GOLD)
+    return c.outline()
+
+
+def gpu_layer():
+    c = layer()
+    x, y, w, h = MONTAR['slots']['placa-video']
+    c.rect(x - 2, y - 3, 2, h + 6, METAL)  # chapinha
+    c.rect(x, y, w, h - 3, DARK)
+    c.hline(x, y, w, DARK_L)
+    c.rect(x, y + h - 3, w, 3, PCB)
+    c.rect(x + 10, y + 2, w - 26, 2, '#22d3ee')  # faixa de LED
+    c.rect(x + w - 8, y - 1, 6, 3, CHIP)  # entrada de energia
+    c.rect(x + 3, y + 3, 6, 3, LABEL)
+    return c.outline()
+
+
+def psu_layer():
+    c = layer()
+    x, y, w, h = MONTAR['slots']['fonte']
+    c.rect(x, y, w, h, DARK)
+    c.hline(x, y, w, DARK_L)
+    for k in range(x + 2, x + 16, 2):  # grade da ventoinha (de lado)
+        c.vline(k, y + 2, h - 4, '#1a1d23')
+    c.rect(x + 20, y + 3, 16, 9, LABEL)
+    c.hline(x + 22, y + 6, 10, '#9aa1ab')
+    c.hline(x + 22, y + 8, 8, '#9aa1ab')
+    c.rect(x + w, y + 1, 2, h - 2, CHIP)  # saída do maço de cabos
+    return c.outline()
+
+
+def drive_layer(kind):
+    c = layer()
+    x, y, w, h = MONTAR['slots'][kind]
+    if kind == 'hd':
+        c.rect(x, y, w, h, METAL)
+        c.hline(x, y, w, METAL_L)
+        c.rect(x + 8, y + 3, 11, 6, LABEL)
+        screws(c, x, y, w, h)
+    else:
+        c.rect(x, y, w, h, DARK)
+        c.hline(x, y, w, DARK_L)
+        c.rect(x + 6, y + 2, 10, 4, '#e05a3a')
+    c.rect(x - 1, y + 1, 2, h - 2, CHIP)  # conectores (energia e dados) do lado de dentro
+    return c.outline()
+
+
+def boot_layer():
+    """Tela de inicialização (marca inventada): um logo e os pontinhos girando."""
+    c = layer()
+    x, y, w, h = MONTAR['screen']
+    c.rect(x, y, w, h, '#13243f')
+    cx, cy = x + w // 2, y + 12
+    c.rect(cx - 7, cy - 7, 14, 14, '#22d3ee')
+    c.rect(cx - 6, cy - 8, 12, 1, '#22d3ee')
+    c.rect(cx - 6, cy + 7, 12, 1, '#22d3ee')
+    for k in range(6):  # triângulo de "play"
+        c.vline(cx - 3 + k, cy - 5 + k, 11 - 2 * k, '#ffffff')
+    for k, col in enumerate(('#ffffff', '#9fb3d1', '#5f7aa3', '#3a5480')):
+        c.rect(cx - 8 + k * 4, y + h - 8, 2, 2, col)
+    return c
+
+
+def led_layer():
+    c = layer()
+    x, y, w, h = MONTAR['slots']['gabinete']
+    c.rect(x + w - 10, y + 20, 4, 1, '#4ade80')
+    return c
+
+
+def icon_case(gamer):
+    """Gabinete na mochila: torre vista de frente, de lado."""
+    c = Canvas(80, 56)
+    x, y, w, h = 24, 2, 30, 52
+    side = '#2b2e36' if gamer else '#c3c9d1'
+    front = '#1d2026' if gamer else '#dfe4ea'
+    c.rect(x + 8, y, w, h, side)  # lateral
+    if gamer:
+        c.rect(x + 11, y + 4, w - 6, h - 8, '#3b3f4b')  # vidro
+        c.rect(x + 13, y + 6, w - 10, h - 12, '#262a33')
+        c.hline(x + 13, y + 6, w - 10, '#a855f7')
+    c.rect(x, y + 2, 9, h - 2, front)  # frente
+    c.rect(x + 2, y + 6, 5, 2, '#1a1d23')
+    disc(c, x + 4, y + 12, 1, '#4ade80' if gamer else '#5a616d')
+    if gamer:
+        for k in range(h - 8):
+            c.p(x + 8, y + 5 + k, ('#a855f7', '#22d3ee', '#ec4899')[(k // 8) % 3])
+    else:
+        for k in range(y + 18, y + h - 6, 3):
+            c.hline(x + 2, k, 5, '#9aa1ab')
+    return c.outline()
+
+
+def make_montar():
+    out = os.path.join(ASSETS, 'montar')
+    os.makedirs(out, exist_ok=True)
+    layers = {
+        'bancada': bench_bg(), 'gabinete': case_layer(False), 'gabinete-gamer': case_layer(True),
+        'placa-mae': mobo_layer(), 'processador': cpu_layer(), 'cooler': cooler_layer(),
+        'ram-0': ram_layer('ram-0', False), 'ram-1': ram_layer('ram-1', False),
+        'ram-0-gamer': ram_layer('ram-0', True), 'ram-1-gamer': ram_layer('ram-1', True),
+        'placa-video': gpu_layer(), 'fonte': psu_layer(), 'hd': drive_layer('hd'), 'ssd': drive_layer('ssd'),
+        'tela-boot': boot_layer(), 'led': led_layer(),
+        'gabinete-icone': icon_case(False), 'gabinete-gamer-icone': icon_case(True),
+    }
+    for name, cv in layers.items():
+        cv.im.resize((cv.w * BIG, cv.h * BIG), Image.NEAREST).save(os.path.join(out, f'{name}.png'), optimize=True)
+    with open(os.path.join(out, 'bancada.json'), 'w') as f:
+        json.dump({'w': BW, 'h': BH, **MONTAR}, f, indent=1)
+
+
 
 def build():
     os.makedirs(ASSETS, exist_ok=True)
@@ -2181,6 +2472,7 @@ def build():
     make_equipamentos()
     make_placas()
     make_pecas()
+    make_montar()
 
     # tipos de móvel: (canvas, área de colisão em px de arte relativa ao canto do sprite, camada)
     #   camada "wall" = pendurado na parede (sem colisão, fica atrás de tudo)

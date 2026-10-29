@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import type { GameResult } from '@playground/games';
 import { createOfficeGame, getOfficeScene } from './game/createGame';
-import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_RITA_WAIT, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
+import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, PC_BOXES, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
 import { OFFICE_EVENTS, RH_LOOK } from './game/OfficeScene';
 import AlarmPanel from './mission/AlarmPanel';
 import CelularOverlay from './mission/CelularOverlay';
@@ -16,6 +16,8 @@ import { checkSurvey, clearWrong, explainProblems, SURVEY_DEVICES, taggedCount, 
 import LevantamentoModal from './mission/LevantamentoModal';
 import MinigameOverlay from './mission/MinigameOverlay';
 import PecaNaMao from './mission/PecaNaMao';
+import MontarPcModal from './mission/MontarPcModal';
+import { BUILDS, newBuildState, type BuildId, type BuildState } from './mission/montarPc';
 import { checkParts, explainWrong, KINDS, partById, partsIn, PART_KINDS, type Bag, type Part, type PartKind } from './mission/pecas';
 import PlacaDestaque from './mission/PlacaDestaque';
 import RelogioPassando from './mission/RelogioPassando';
@@ -37,6 +39,7 @@ import {
   MISSAO_FORCA,
   MISSAO_LEVANTAMENTO,
   MISSAO_MONTAGEM,
+  MISSAO_MONTAR_PCS,
   MISSAO_PCS,
   MISSAO_PECAS,
   MISSAO_PLACAS,
@@ -85,7 +88,7 @@ export interface OfficeGameProps {
   surpriseQuiz?: MissionGame | null;
   /** Palavras-cruzadas do tablet da Rita, fase 3, missão 2 (padrão: uma de exemplo com as peças do computador). */
   ritaCrossword?: MissionGame | null;
-  /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 da fase 3 (as anteriores contam como feitas). */
+  /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 ou 3 da fase 3 (as anteriores contam como feitas). */
   startAt?: 1 | 2 | 3 | 4 | 5 | 6;
   /** Começa no 1º dia (fase 1, padrão) ou direto no 2º ou 3º dia (com o XP dos dias anteriores sem erros). */
   fase?: 1 | 2 | 3;
@@ -121,7 +124,8 @@ type Phase =
   | 'phone'
   | 'peca'
   | 'askP2'
-  | 'crosswordP2';
+  | 'crosswordP2'
+  | 'montar';
 /** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
 type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
@@ -136,6 +140,8 @@ type Fase2M5 = 'off' | 'ringing' | 'pending' | 'done';
 type Fase3M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 3, missão 2: com sede (indo à Copa), a Rita correu atrás dele, esperando na Copa (não ajudou ainda), concluída. */
 type Fase3M2 = 'off' | 'thirsty' | 'met' | 'waiting' | 'done';
+/** Fase 3, missão 3: Marcos chamou, montando os computadores, concluída. */
+type Fase3M3 = 'off' | 'called' | 'working' | 'done';
 /** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
 type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
 /** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
@@ -359,6 +365,19 @@ function OfficeDay({
     p2Ref.current = v;
     setP2State(v);
   };
+  // fase 3, missão 3
+  const [p3, setP3State] = useState<Fase3M3>('off');
+  const p3Ref = useRef<Fase3M3>('off');
+  const setP3 = (v: Fase3M3) => {
+    p3Ref.current = v;
+    setP3State(v);
+  };
+  /** Montagem de cada computador (continua de onde parou ao fechar o modal) e os que já ligaram. */
+  const builds = useRef<Record<BuildId, BuildState>>({ estudante: newBuildState(), gamer: newBuildState(), escritorio: newBuildState() });
+  const [buildsDone, setBuildsDone] = useState<BuildId[]>([]);
+  const buildsDoneRef = useRef<BuildId[]>([]);
+  const [openBuild, setOpenBuild] = useState<number | null>(null);
+  const [, setBuildTick] = useState(0);
   /** Mochila (uma peça de cada tipo) e os itens da lista que o Marcos já recebeu certos. */
   const [bag, setBagState] = useState<Bag>({});
   const bagRef = useRef<Bag>({});
@@ -1659,12 +1678,18 @@ function OfficeDay({
     s.rhPlace(RH_WAIT, 'down');
     s.setRhTablet(true);
     setToast(MISSAO_PECAS.dayStart);
-    if (startAt === 2) {
-      // para testes: a missão 1 conta como feita (e entra no resumo do dia)
-      xpLog.current = [{ mission: MISSAO_PECAS.id, title: MISSAO_PECAS.title, xp: MISSAO_PECAS.xp }];
-      setXpTo(startXp + MISSAO_PECAS.xp);
+    if (startAt === 2 || startAt === 3) {
+      // para testes: as missões anteriores contam como feitas (e entram no resumo do dia)
+      const done = [MISSAO_PECAS, MISSAO_CRUZADAS_RITA].slice(0, startAt - 1);
+      xpLog.current = done.map((m) => ({ mission: m.id, title: m.title, xp: m.xp }));
+      setXpTo(startXp + done.reduce((sum, m) => sum + m.xp, 0));
       setP1('done');
-      void startF3M2();
+      if (startAt === 2) {
+        void startF3M2();
+        return;
+      }
+      setP2('done');
+      void startF3M3(false);
       return;
     }
     await new Promise((r) => window.setTimeout(r, 2500));
@@ -1686,8 +1711,18 @@ function OfficeDay({
       talkToRita();
       return;
     }
+    if (id.startsWith('pcbox:')) {
+      openPcBox(Number(id.slice(6)));
+      return;
+    }
     const s = scene();
     if (!s) return;
+    if (id === 'marcos' && p3Ref.current === 'called') {
+      s.setFrozen(true);
+      s.itGuyFacePlayer();
+      void briefingP3();
+      return;
+    }
     if (id === 'marcos') {
       if (p1Ref.current !== 'called' && p1Ref.current !== 'working') return;
       s.setFrozen(true);
@@ -1914,8 +1949,119 @@ function OfficeDay({
         setToast(MISSAO_CRUZADAS_RITA.drink);
         backToExplore();
         onMissionComplete?.({ missionId: MISSAO_CRUZADAS_RITA.id, xp: MISSAO_CRUZADAS_RITA.xp, success: true, game: result });
+        void startF3M3(true);
       },
     );
+  };
+
+  // ------------------------------------------------------------ fase 3, missão 3: os 3 computadores do Marcos
+
+  const boxSpots = () =>
+    PC_BOXES.flatMap((b, i) => (buildsDoneRef.current.includes(BUILDS[i].id) ? [] : [{ id: `pcbox:${i}`, zone: b.zone }]));
+
+  /** Depois da água o ESTAGIÁRIO sai de fininho da Copa, e logo o Marcos chama de novo. */
+  const startF3M3 = async (escape: boolean) => {
+    await new Promise((r) => window.setTimeout(r, escape ? 600 : 2500));
+    await whenFree();
+    const s = scene();
+    if (!alive.current || !s) return;
+    if (escape) {
+      await new Promise<void>((resolve) => say([me(MISSAO_MONTAR_PCS.escape, { continueLabel: 'Sair de fininho' })], () => resolve()));
+      const sc = scene();
+      if (!alive.current || !sc) return;
+      sc.setFrozen(true);
+      setPhase('dialog');
+      await sc.playerRunTo(COPA_ESCAPE);
+      if (!alive.current) return;
+      backToExplore();
+      await new Promise((r) => window.setTimeout(r, 1800));
+      await whenFree();
+    }
+    const sc = scene();
+    if (!alive.current || !sc) return;
+    setP3('called');
+    await sc.itGuyWaits();
+    if (!alive.current) return;
+    sc.setItAlert(true);
+    say([marcos(MISSAO_MONTAR_PCS.call, { continueLabel: 'Estou indo!' })], () => {
+      scene()?.setSpots([{ id: 'marcos', zone: IT_ZONE }]);
+      backToExplore();
+    });
+  };
+
+  /** Na Sala de TI: o Marcos mostra as 3 caixas e explica o serviço. */
+  const briefingP3 = async () => {
+    const s = scene();
+    if (!s) return;
+    s.setItAlert(false);
+    s.setSpots([]);
+    setPhase('dialog');
+    s.showPcBoxes();
+    const mid = PC_BOXES[1].at;
+    await s.lookAt(mid.x + 60, mid.y);
+    if (!alive.current) return;
+    const lines = MISSAO_MONTAR_PCS.briefing.map((t, i, all) => marcos(t, i === all.length - 1 ? { continueLabel: 'Vamos montar!' } : {}));
+    say(lines, async () => {
+      const sc = scene();
+      if (!sc) return;
+      sc.setFrozen(true);
+      setPhase('dialog');
+      await sc.lookAtPlayer();
+      if (!alive.current) return;
+      setP3('working');
+      sc.setSpots(boxSpots());
+      void sc.itGuySitsDown();
+      backToExplore();
+    });
+  };
+
+  const openPcBox = (index: number) => {
+    if (p3Ref.current !== 'working' || buildsDoneRef.current.includes(BUILDS[index].id)) return;
+    scene()?.setFrozen(true);
+    setOpenBuild(index);
+    setPhase('montar');
+  };
+
+  const closePcBox = (done: boolean) => {
+    const index = openBuild;
+    setOpenBuild(null);
+    if (index === null) return backToExplore();
+    const build = BUILDS[index];
+    if (!done || buildsDoneRef.current.includes(build.id)) return backToExplore();
+    const next = [...buildsDoneRef.current, build.id];
+    buildsDoneRef.current = next;
+    setBuildsDone(next);
+    const s = scene();
+    s?.setPcBox(index, true);
+    s?.setSpots(boxSpots());
+    setToast(MISSAO_MONTAR_PCS.built(build.title, next.length));
+    backToExplore();
+    if (next.length === BUILDS.length) void finishP3();
+  };
+
+  /** Os 3 ligaram: o Marcos levanta, agradece e os dois comemoram. */
+  const finishP3 = async () => {
+    await new Promise((r) => window.setTimeout(r, 800));
+    await whenFree();
+    const s = scene();
+    if (!alive.current || !s) return;
+    s.setFrozen(true);
+    setPhase('dialog');
+    s.setSpots([]);
+    await s.itGuyComesToPlayer();
+    if (!alive.current) return;
+    addXp(MISSAO_MONTAR_PCS, MISSAO_MONTAR_PCS.xp);
+    setP3('done');
+    say([marcos(MISSAO_MONTAR_PCS.success, { badge: `+${MISSAO_MONTAR_PCS.xp} XP · Missão concluída!`, continueLabel: 'Bate aqui!' })], async () => {
+      const sc = scene();
+      if (!sc) return;
+      sc.setFrozen(true);
+      setPhase('dialog');
+      await Promise.all([sc.cheer(), sc.itGuyHops()]);
+      if (!alive.current) return;
+      backToExplore();
+      onMissionComplete?.({ missionId: MISSAO_MONTAR_PCS.id, xp: MISSAO_MONTAR_PCS.xp, success: true });
+    });
   };
 
   /** Para testes: pula direto para a missão 2 a 6 (as anteriores entram no resumo como feitas, sem bronca). */
@@ -1999,7 +2145,13 @@ function OfficeDay({
   // ------------------------------------------------------------ tela
 
   let objective: { title: string; text: string; done: boolean };
-  if (fase === 3 && p2 !== 'off') {
+  if (fase === 3 && p3 !== 'off') {
+    const title = `Fase 3 · Missão 3: ${MISSAO_MONTAR_PCS.title}.`;
+    if (p3 === 'done')
+      objective = { title: 'Missão concluída:', text: `${MISSAO_MONTAR_PCS.title} (+${MISSAO_MONTAR_PCS.xp} XP). Explore o escritório à vontade.`, done: true };
+    else if (p3 === 'working') objective = { title, text: `${OBJETIVOS.montarPcs} (${buildsDone.length}|${BUILDS.length} ligados).`, done: false };
+    else objective = { title, text: OBJETIVOS.ti33, done: false };
+  } else if (fase === 3 && p2 !== 'off') {
     if (p2 === 'done')
       objective = { title: 'Missão concluída:', text: `${MISSAO_CRUZADAS_RITA.title} (+${MISSAO_CRUZADAS_RITA.xp} XP). Explore o escritório à vontade.`, done: true };
     else if (p2 === 'thirsty') objective = { title: 'Fase 3 · Missão 2:', text: OBJETIVOS.copaAgua, done: false };
@@ -2153,6 +2305,14 @@ function OfficeDay({
               📋 Lista
             </button>
           </>
+        )}
+        {p3 === 'working' && (
+          <span className={buildsDone.length === BUILDS.length ? 'office-parts is-full' : 'office-parts'} title="Computadores montados e ligados">
+            <span aria-hidden="true">🖥️</span>
+            <span>
+              <strong key={buildsDone.length}>{buildsDone.length}</strong>|{BUILDS.length}
+            </span>
+          </span>
         )}
         {f5 === 'pending' && (
           <button type="button" className="office-phone-hud" disabled={phase !== 'explore'} onClick={openPhone}>
@@ -2332,6 +2492,19 @@ function OfficeDay({
             holder="estagiario"
             doneLabel="Devolver o tablet"
             onClose={finishRitaCrossword}
+          />
+        )}
+        {phase === 'montar' && openBuild !== null && (
+          <MontarPcModal
+            key={BUILDS[openBuild].id}
+            build={BUILDS[openBuild]}
+            index={openBuild + 1}
+            state={builds.current[BUILDS[openBuild].id]}
+            onChange={(st) => {
+              builds.current = { ...builds.current, [BUILDS[openBuild].id]: st };
+              setBuildTick((n) => n + 1);
+            }}
+            onClose={closePcBox}
           />
         )}
         {phase === 'phone' && (

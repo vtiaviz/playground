@@ -91,7 +91,8 @@ export default function OfficePage() {
             desenvolvimento (Arduino e Raspberry Pi) escondidas nos armários com lupa; a forca que ficou aberta no tablet
             quando o Marcos cochilou; e o exercício surpresa do curso, que chega pelo WhatsApp no celular do estagiário.
             No fim, o chefe dispensa o estagiário e aparece o resumo do 2º dia. No 3º dia (fase 3), as peças de hardware da
-            lista do Marcos e as palavras-cruzadas do tablet da Rita, na Copa.
+            lista do Marcos, as palavras-cruzadas do tablet da Rita, na Copa, e a montagem de 3 computadores (estudante, gamer
+            e escritório) na Sala de TI.
           </p>
         </div>
         <GamePicker

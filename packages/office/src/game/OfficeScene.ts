@@ -40,6 +40,7 @@ import {
   IT_TABLET_FLOOR,
   IT_TABLET_DESK,
   WATER_SPOT,
+  PC_BOXES,
   besidePlayer,
   landingSpots,
   PICKUP_RADIUS,
@@ -133,6 +134,7 @@ export class OfficeScene extends Phaser.Scene {
   private tablet: Phaser.GameObjects.Image | null = null;
   private rhTablet: Phaser.GameObjects.Image | null = null;
   private rhAlert: Phaser.GameObjects.Image | null = null;
+  private pcBoxes: { img: Phaser.GameObjects.Image; alert: Phaser.GameObjects.Image | null }[] = [];
   private night!: Phaser.GameObjects.Rectangle;
   private siren!: Phaser.GameObjects.Rectangle;
   private screenLights = new Map<string, Phaser.GameObjects.Image[]>();
@@ -1488,6 +1490,68 @@ export class OfficeScene extends Phaser.Scene {
       this.tweens.add({ targets: drop, y: drop.y - 22, alpha: 0, duration: 700, delay: k * 250, onComplete: () => drop.destroy() });
     }
     await this.wait(1500);
+  }
+
+  // ------------------------------------------------------------ fase 3, missão 3: as 3 caixas dos computadores
+
+  /** As 3 caixas aparecem na Sala de TI (pulando no lugar), com o "!" em cima e a base sólida. */
+  showPcBoxes() {
+    if (this.pcBoxes.length) return;
+    this.pcBoxes = PC_BOXES.map((b, i) => {
+      const img = this.add.image(b.at.x, b.at.y - 30, 'moveis', 'caixa').setOrigin(0).setAlpha(0).setDepth(b.at.y + 40);
+      this.tweens.add({ targets: img, y: b.at.y, alpha: 1, duration: 420, delay: i * 180, ease: 'Bounce.easeOut' });
+      const zone = this.add.zone(b.foot.x + b.foot.w / 2, b.foot.y + b.foot.h / 2, b.foot.w, b.foot.h);
+      this.physics.add.existing(zone, true);
+      this.physics.add.collider(this.player, zone);
+      return { img, alert: null };
+    });
+    this.time.delayedCall(900, () => this.pcBoxes.forEach((_, i) => this.setPcBox(i, false)));
+  }
+
+  /** Caixa aberta (computador montado) ou fechada com o "!" (ainda falta montar). */
+  setPcBox(index: number, done: boolean) {
+    const b = this.pcBoxes[index];
+    if (!b) return;
+    b.img.setFrame(done ? 'caixa-aberta' : 'caixa');
+    b.alert?.destroy();
+    b.alert = null;
+    if (done) return;
+    const at = PC_BOXES[index].at;
+    const icon = this.add.image(at.x + 24, at.y - 10, 'moveis', 'alerta').setDepth(100000);
+    this.tweens.add({ targets: icon, y: icon.y - 5, duration: 450, yoyo: true, repeat: -1 });
+    b.alert = icon;
+  }
+
+  /** O Marcos levanta (se estiver sentado) e vem até o lado do ESTAGIÁRIO, e os dois ficam de frente. */
+  async itGuyComesToPlayer() {
+    let s = this.itWalker;
+    if (!s) {
+      s = this.add.sprite(IT_SEAT.x, IT_SEAT.y, 'colegas', 2).setOrigin(0.5, FEET_Y / FRAME.h);
+      this.itGuy.setFrame('cadeira-vazia');
+      this.itWalker = s;
+    }
+    this.setItAlert(false);
+    const p = { x: this.player.x, y: this.player.y };
+    await this.walkSprite(s, 0, besidePlayer(p, { x: s.x, y: s.y }, 34));
+    if (!s.active) return;
+    this.itGuyFacePlayer();
+    const dx = s.x - p.x;
+    const dy = s.y - p.y;
+    this.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
+  }
+
+  /** O Marcos pula de alegria junto com o ESTAGIÁRIO. */
+  async itGuyHops(times = 6) {
+    const s = this.itWalker;
+    if (!s) return;
+    this.setItAlert(false);
+    s.setFrame(ROW.down * FRAME.cols + 2);
+    for (let k = 0; k < times; k++) {
+      await new Promise<void>((resolve) =>
+        this.tweens.add({ targets: s, y: s.y - 10, duration: 160, yoyo: true, ease: 'Quad.easeOut', onComplete: () => resolve() }),
+      );
+      await this.wait(120);
+    }
   }
 
   private wait(ms: number) {

@@ -2223,3 +2223,278 @@ tr.is-marked .office-clip-row {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------------------------------------------------------------- fase 3, missão 3: a mesa de montagem */
+.office-montar-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+  background: rgba(8, 12, 22, 0.78);
+  animation: office-fade 200ms ease-out;
+  touch-action: none;
+}
+.office-montar-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+  grid-template-areas: 'head head' 'bench box';
+  gap: 14px 18px;
+  width: min(1180px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 16px 18px 18px;
+  border: 3px solid #1c1626;
+  border-radius: 12px;
+  background: #fdf8ec;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.35);
+  outline: none;
+  animation: office-pop 320ms ease-out;
+}
+.office-montar-head {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.office-montar-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.office-montar-kicker {
+  margin: 0;
+  color: #0f6e5c;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.office-montar-order {
+  margin: 2px 0 0;
+  color: #2b2f37;
+}
+.office-montar-head button,
+.office-montar-actions button {
+  padding: 0.55rem 1rem;
+  border: 2px solid #1c1626;
+  border-radius: 8px;
+  background: #fff;
+  color: #1c1626;
+  font-weight: 800;
+}
+.office-montar-bench {
+  grid-area: bench;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.office-montar-stage {
+  position: relative;
+  overflow: hidden;
+  border: 3px solid #1c1626;
+  border-radius: 8px;
+  user-select: none;
+}
+.office-montar-stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.office-montar-stage img.is-layer {
+  position: absolute;
+  inset: 0;
+}
+.office-montar-stage img.is-boot {
+  animation: office-fade 500ms ease-out;
+}
+.office-montar-stage.is-booting {
+  animation: office-montar-shake 120ms linear 4;
+}
+@keyframes office-montar-shake {
+  50% {
+    transform: translateX(1px);
+  }
+}
+.office-montar-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.office-montar-target {
+  fill: rgba(255, 255, 255, 0.25);
+  stroke: #0f6e5c;
+  stroke-width: 0.8;
+  stroke-dasharray: 3 2;
+  animation: office-montar-blink 1.4s ease-in-out infinite;
+}
+@keyframes office-montar-blink {
+  50% {
+    opacity: 0.45;
+  }
+}
+.office-montar-port {
+  stroke: #1c1626;
+  stroke-width: 0.7;
+  cursor: crosshair;
+}
+.office-montar-port.is-waiting {
+  animation: office-montar-blink 1.1s ease-in-out infinite;
+}
+.office-montar-port.is-used {
+  cursor: default;
+  r: 1.6px;
+}
+.office-montar-power {
+  fill: transparent;
+  cursor: pointer;
+}
+.office-montar-power:hover {
+  fill: rgba(74, 222, 128, 0.35);
+}
+.office-montar-progress {
+  fill: #22d3ee;
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: office-montar-load 1.6s ease-in-out infinite;
+}
+@keyframes office-montar-load {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.office-montar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.office-montar-legend span {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  border: 2px solid #1c1626;
+  border-radius: 50%;
+  vertical-align: -2px;
+}
+.office-montar-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+.office-montar-note.is-info {
+  background: #eef2f7;
+  color: #2b2f37;
+}
+.office-montar-note.is-ok {
+  background: #e4f4df;
+  color: #24601f;
+}
+.office-montar-note.is-bad {
+  background: #fde8e4;
+  color: #8f2a1a;
+}
+.office-montar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.office-montar-box {
+  grid-area: box;
+  min-width: 0;
+  padding: 12px;
+  border: 6px solid #9c6c38;
+  border-radius: 8px;
+  background: #c8955a;
+}
+.office-montar-box h3 {
+  margin: 0 0 8px;
+  color: #3b2410;
+  font-size: 1rem;
+}
+.office-montar-box ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.office-montar-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 4px;
+  border: 3px solid #5a3a1c;
+  border-radius: 6px;
+  background: #f4e4c4;
+  color: #1c1626;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.office-montar-cell img {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.office-montar-cell:hover {
+  background: #fff4dc;
+}
+.office-montar-cell.is-dragging {
+  opacity: 0.35;
+}
+.office-montar-cell.is-empty {
+  background: #b98549;
+  border-style: dashed;
+  cursor: default;
+}
+.office-montar-empty {
+  margin: 8px 0 0;
+  color: #3b2410;
+  font-weight: 700;
+}
+.office-montar-ghost {
+  position: fixed;
+  z-index: 1001;
+  width: 120px;
+  transform: translate(-50%, -50%) rotate(-4deg);
+  image-rendering: pixelated;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.35));
+}
+@media (max-width: 760px) {
+  .office-montar-card {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'head' 'bench' 'box';
+  }
+  .office-montar-box ul {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

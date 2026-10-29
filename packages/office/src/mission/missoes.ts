@@ -70,6 +70,8 @@ export const OBJETIVOS = {
   forcaTablet: 'Termine a forca do tablet do Marcos: acerte as 5 palavras (chegue perto do tablet no chão)',
   copaAgua: 'Bateu uma sede: vá até a Copa beber água',
   ritaCruzadas: 'Fale com a Rita, na Copa, para ajudar com as palavras-cruzadas do tablet',
+  ti33: 'Vá até a Sala de TI: o Marcos está chamando de novo',
+  montarPcs: 'Monte os 3 computadores: chegue perto de cada caixa na Sala de TI',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -393,3 +395,19 @@ export const MISSAO_CRUZADAS_RITA = {
 
 /** Usadas quando nenhuma palavra-cruzada da biblioteca é escolhida para a Rita (as peças do computador). */
 export const CRUZADAS_RITA_PADRAO: MissionGame = { title: cruzadasRitaPadrao.title, config: cruzadasRitaPadrao };
+
+/** Fase 3, missão 3: o Marcos chama de novo para montar os 3 computadores (estudante, gamer e escritório). */
+export const MISSAO_MONTAR_PCS = {
+  id: 'montar-pcs',
+  title: 'Os 3 computadores do Marcos',
+  xp: 100,
+  escape: 'Melhor eu sair rapidinho daqui, antes que apareça mais alguma palavra-cruzada…',
+  call: 'ESTAGIÁRIO! Volta aqui na Sala de TI? Agora preciso de ajuda para montar uns computadores!',
+  briefing: [
+    'Chegaram as peças de 3 computadores novos: um para estudante, um gamer e um para o escritório. Cada caixa tem as peças de um deles.',
+    'É simples: chegue perto de uma caixa e arraste cada peça até o lugar dela no gabinete. Depois ligue os cabos de energia e os de dados (SATA).',
+    'No fim, aperte o botão de ligar. Se aparecer a tela de inicialização, está montado! Quero ver os três ligando.',
+  ],
+  built: (title: string, n: number) => `🖥️ ${title}: pronto! (${n}|3)`,
+  success: 'Os três ligaram de primeira! Estudante, gamer e escritório, todos prontinhos. Você manda muito bem, estagiário!',
+} as const;
