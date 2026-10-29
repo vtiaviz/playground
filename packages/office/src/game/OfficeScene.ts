@@ -45,6 +45,8 @@ import {
   MEETING_SEAT,
   URINAL_SPOTS,
   WALL_WORDS,
+  PRINT_DESK,
+  PRINTER,
   besidePlayer,
   landingSpots,
   PICKUP_RADIUS,
@@ -180,6 +182,10 @@ export class OfficeScene extends Phaser.Scene {
   /** Fase 3, missão 5: balão com a gota em cima da cabeça (vontade de ir ao banheiro). */
   private urge: Phaser.GameObjects.Image | null = null;
   private puddle: Phaser.GameObjects.Image | null = null;
+  /** Fase 4, missão 2: a mesa do PC da Sala de Impressão, o maço das cópias e os "!" que mostram aonde ir. */
+  private printDesk: Phaser.GameObjects.Image | null = null;
+  private copies: Phaser.GameObjects.Image | null = null;
+  private marks: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super('office');
@@ -1754,6 +1760,78 @@ export class OfficeScene extends Phaser.Scene {
         });
       },
     });
+  }
+
+  /** Aparece a mesa com o PC da Sala de Impressão (só no 4º dia), com a base sólida. */
+  showPrintDesk() {
+    if (this.printDesk) return;
+    const d = PRINT_DESK;
+    this.printDesk = this.add.image(d.at.x, d.at.y, 'moveis', d.type).setOrigin(0).setDepth(d.at.y + d.h);
+    const zone = this.add.zone(d.foot.x + d.foot.w / 2, d.foot.y + d.foot.h / 2, d.foot.w, d.foot.h);
+    this.physics.add.existing(zone, true);
+    this.physics.add.collider(this.player, zone);
+  }
+
+  /** "!" pulando em cima de cada ponto (aonde o ESTAGIÁRIO tem que ir agora); lista vazia apaga todos. */
+  setMarks(points: Point[]) {
+    this.marks.forEach((m) => m.destroy());
+    this.marks = points.map((p) => {
+      const icon = this.add.image(p.x, p.y - 10, 'moveis', 'alerta').setDepth(100000);
+      this.tweens.add({ targets: icon, y: icon.y - 5, duration: 450, yoyo: true, repeat: -1 });
+      return icon;
+    });
+  }
+
+  /** O maço das cópias impressas em cima da impressora (some quando o ESTAGIÁRIO pega). */
+  setCopies(on: boolean) {
+    this.copies?.destroy();
+    this.copies = null;
+    if (!on) return;
+    const at = PRINTER.copies;
+    this.copies = this.add.image(at.x, at.y, 'moveis', 'copias').setOrigin(0).setDepth(PRINTER.zone.y + 1);
+    this.tweens.add({ targets: this.copies, y: at.y - 2, duration: 300, yoyo: true, repeat: 2 });
+  }
+
+  /** O chefe (em pé) vem até o lado do ESTAGIÁRIO, e os dois ficam de frente. */
+  async ceoComesToPlayer() {
+    const s = this.ceoWalker;
+    if (!s) return;
+    this.setCeoWalkerAlert(false);
+    const p = { x: this.player.x, y: this.player.y };
+    await this.walkSprite(s, CEO_LOOK, besidePlayer(p, { x: s.x, y: s.y }, 34));
+    if (!s.active) return;
+    this.ceoFacePlayer();
+    const dx = s.x - p.x;
+    const dy = s.y - p.y;
+    this.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
+  }
+
+  /** O chefe (em pé) comemora muito: pula várias vezes, com confete, junto com o ESTAGIÁRIO. */
+  async ceoCelebrates(times = 8) {
+    const s = this.ceoWalker;
+    if (!s) return;
+    this.setCeoWalkerAlert(false);
+    this.setCeoWalkerSmoke(false);
+    s.setFrame(CEO_LOOK * 4 * FRAME.cols + 2);
+    const confetti = this.add.particles(s.x, s.y - FEET_Y, 'moveis', {
+      frame: 'confete',
+      speed: { min: 120, max: 240 },
+      angle: { min: 200, max: 340 },
+      gravityY: 400,
+      lifespan: 1500,
+      rotate: { min: 0, max: 360 },
+      tint: [0xf54129, 0xffae00, 0x0190ff, 0xa0c330, 0xffffff],
+      emitting: false,
+    });
+    confetti.setDepth(100001);
+    for (let k = 0; k < times; k++) {
+      if (k % 3 === 0) confetti.explode(30);
+      await new Promise<void>((resolve) =>
+        this.tweens.add({ targets: s, y: s.y - 12, duration: 160, yoyo: true, ease: 'Quad.easeOut', onComplete: () => resolve() }),
+      );
+      await this.wait(100);
+    }
+    this.time.delayedCall(1600, () => confetti.destroy());
   }
 
   private wait(ms: number) {

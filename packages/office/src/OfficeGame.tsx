@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import type { GameResult } from '@playground/games';
 import { createOfficeGame, getOfficeScene } from './game/createGame';
-import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, PROJECTOR_BOX, URINAL_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
+import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, PROJECTOR_BOX, PRINT_DESK, PRINTER, URINAL_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
 import { OFFICE_EVENTS, RH_LOOK } from './game/OfficeScene';
 import AlarmPanel from './mission/AlarmPanel';
 import CelularOverlay from './mission/CelularOverlay';
@@ -41,6 +41,7 @@ import {
   MISSAO_BANHEIRO,
   MISSAO_FIM,
   MISSAO_FORCA,
+  MISSAO_IMPRESSAO,
   MISSAO_LEVANTAMENTO,
   MISSAO_MONTAGEM,
   MISSAO_MONTAR_PCS,
@@ -61,6 +62,9 @@ import QuadroOverlay from './mission/QuadroOverlay';
 import SonhoOverlay from './mission/SonhoOverlay';
 import ProjetorModal from './mission/ProjetorModal';
 import { newSetupState, type SetupState } from './mission/projetor';
+import ImpressoraModal from './mission/ImpressoraModal';
+import { newPrinterState, type PrinterState } from './mission/impressao';
+import PcImpressaoModal from './mission/sistemas/PcImpressaoModal';
 import { allPlaced, checkKit, KITS, newKitState, type KitState } from './mission/montagem';
 import MontagemModal from './mission/MontagemModal';
 import PcModal, { formatTime } from './mission/PcModal';
@@ -141,7 +145,9 @@ type Phase =
   | 'montar'
   | 'quizP4'
   | 'dreamP5'
-  | 'projetor';
+  | 'projetor'
+  | 'pcImpressao'
+  | 'impressora';
 /** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
 type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
@@ -167,6 +173,8 @@ type Fase3M4 = 'off' | 'called' | 'quiz' | 'waiting' | 'done';
 type Fase3M5 = 'off' | 'running' | 'wet' | 'urinal' | 'exit' | 'leaving' | 'done';
 /** Fase 4, missão 1: o chefe chamou (indo à Sala de Reuniões), instalando o projetor e a webcam, concluída. */
 type Fase4M1 = 'off' | 'called' | 'working' | 'done';
+/** Fase 4, missão 2: imprimindo (PC e impressora), as cópias saíram (pegar), levando ao chefe, concluída. */
+type Fase4M2 = 'off' | 'working' | 'printed' | 'carrying' | 'done';
 /** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
 type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
 /** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
@@ -432,6 +440,27 @@ function OfficeDay({
   };
   /** Instalação do projetor e da webcam (continua de onde parou ao fechar o modal). */
   const [setup, setSetup] = useState<SetupState>(() => newSetupState());
+  // fase 4, missão 2
+  const [q2, setQ2State] = useState<Fase4M2>('off');
+  const q2Ref = useRef<Fase4M2>('off');
+  const setQ2 = (v: Fase4M2) => {
+    q2Ref.current = v;
+    setQ2State(v);
+  };
+  /** Os cabos da impressora, se ela já ligou e se as cópias já saíram (continua de onde parou ao fechar). */
+  const [printer, setPrinterState] = useState<PrinterState>(() => newPrinterState());
+  const printerRef = useRef<PrinterState>(printer);
+  const setPrinter = (p: PrinterState) => {
+    printerRef.current = p;
+    setPrinterState(p);
+  };
+  /** Já viu a impressora off-line no PC (o "!" passa para a impressora). */
+  const [pcSeen, setPcSeenState] = useState(false);
+  const pcSeenRef = useRef(false);
+  const setPcSeen = (v: boolean) => {
+    pcSeenRef.current = v;
+    setPcSeenState(v);
+  };
   const [secondsLeft5, setSecondsLeft5] = useState<number>(MISSAO_BANHEIRO.tempo);
   /** Mochila (uma peça de cada tipo) e os itens da lista que o Marcos já recebeu certos. */
   const [bag, setBagState] = useState<Bag>({});
@@ -2350,6 +2379,17 @@ function OfficeDay({
     s.rhPlace(RH_WAIT, 'down');
     s.itGuyAbsent();
     setToast(MISSAO_PROJETOR.dayStart);
+    if (startAt === 2) {
+      // para testes: o projetor conta como feito (e entra no resumo do dia); o chefe vai para a Sala de Reuniões
+      xpLog.current = [{ mission: MISSAO_PROJETOR.id, title: MISSAO_PROJETOR.title, xp: MISSAO_PROJETOR.xp }];
+      setXpTo(startXp + MISSAO_PROJETOR.xp);
+      setQ1('done');
+      s.setCeoMood('tranquilo');
+      await s.ceoWalkTo(MEETING_BOSS, 'left');
+      await whenFree();
+      if (alive.current) startQ2();
+      return;
+    }
     await new Promise((r) => window.setTimeout(r, 4800));
     if (!alive.current) return;
     setToast(MISSAO_PROJETOR.absent);
@@ -2427,8 +2467,136 @@ function OfficeDay({
         setPhase('dialog');
         await sc.cheer();
         if (!alive.current) return;
-        backToExplore();
         onMissionComplete?.({ missionId: MISSAO_PROJETOR.id, xp: MISSAO_PROJETOR.xp, success: true });
+        startQ2();
+      },
+    );
+  };
+
+  // ------------------------------------------------------------ fase 4, missão 2: as 10 cópias da reunião
+
+  /** O chefe lembra das 10 cópias; a mesa com o PC aparece na Sala de Impressão. */
+  const startQ2 = () => {
+    const s = scene();
+    if (!s) return;
+    s.ceoFacePlayer();
+    const lines = MISSAO_IMPRESSAO.call.map((t, i, all) =>
+      ceo(t, i === 1 ? 'ceo-bravo-a' : 'ceo-feliz-b', i === all.length - 1 ? { continueLabel: 'Pode deixar, chefe!' } : {}),
+    );
+    say(lines, () => {
+      const sc = scene();
+      if (!sc) return;
+      setQ2('working');
+      sc.showPrintDesk();
+      sc.setSpots([
+        { id: 'pc-impressao', zone: PRINT_DESK.zone },
+        { id: 'impressora', zone: PRINTER.zone },
+      ]);
+      markQ2(printerRef.current, pcSeenRef.current);
+      setToast(MISSAO_IMPRESSAO.go);
+      backToExplore();
+    });
+  };
+
+  /** O "!" mostra aonde ir: o PC; a impressora (depois de ver que está off-line); o PC de novo (para imprimir). */
+  const markQ2 = (p: PrinterState, seen: boolean) => {
+    const s = scene();
+    if (!s) return;
+    s.setMarks([!p.on && seen ? PRINTER.top : PRINT_DESK.monitor]);
+  };
+
+  const onSpotQ2 = (id: string) => {
+    if (phaseRef.current !== 'explore') return;
+    const q = q2Ref.current;
+    const p = printerRef.current;
+    if (id === 'pc-impressao') {
+      if (q === 'printed') setToast(MISSAO_IMPRESSAO.takeFirst);
+      if (q !== 'working') return;
+      scene()?.setFrozen(true);
+      setPcSeen(true);
+      setPhase('pcImpressao');
+      return;
+    }
+    if (id !== 'impressora') return;
+    if (q === 'printed') {
+      pickCopies();
+      return;
+    }
+    if (q !== 'working') return;
+    if (p.on) {
+      setToast(MISSAO_IMPRESSAO.alreadyOn);
+      return;
+    }
+    if (Object.keys(p.plugs).length) {
+      scene()?.setFrozen(true);
+      setPhase('impressora');
+      return;
+    }
+    say([me(MISSAO_IMPRESSAO.cables, { continueLabel: 'Ver a traseira' })], () => {
+      scene()?.setFrozen(true);
+      setPhase('impressora');
+    });
+  };
+
+  /** Saiu do PC: imprimiu (as cópias aparecem em cima da impressora) ou ainda não. */
+  const closePcImpressao = (printed: boolean) => {
+    backToExplore();
+    const s = scene();
+    if (!s) return;
+    if (printed) {
+      setQ2('printed');
+      s.setCopies(true);
+      s.setMarks([PRINTER.top]);
+      setToast(MISSAO_IMPRESSAO.printed);
+      return;
+    }
+    markQ2(printerRef.current, true);
+    setToast(printerRef.current.on ? MISSAO_IMPRESSAO.notYet : MISSAO_IMPRESSAO.offline);
+  };
+
+  const closeImpressora = (done: boolean) => {
+    backToExplore();
+    markQ2(printerRef.current, true);
+    setToast(done ? MISSAO_IMPRESSAO.online : MISSAO_IMPRESSAO.notYet);
+  };
+
+  /** Pegou o maço das cópias em cima da impressora: agora é levar ao chefe. */
+  const pickCopies = () => {
+    const s = scene();
+    if (!s) return;
+    setQ2('carrying');
+    s.setCopies(false);
+    s.setMarks([]);
+    s.setCeoWalkerAlert(true);
+    setToast(MISSAO_IMPRESSAO.picked);
+  };
+
+  /** Chegou na Sala de Reuniões com as cópias: o chefe vem buscar, agradece e os dois comemoram muito. */
+  const deliverCopies = async () => {
+    const s = scene();
+    if (!s) return;
+    s.setFrozen(true);
+    setPhase('dialog');
+    s.setSpots([]);
+    await s.ceoComesToPlayer();
+    if (!alive.current) return;
+    addXp(MISSAO_IMPRESSAO, MISSAO_IMPRESSAO.xp);
+    setQ2('done');
+    const [first, last] = MISSAO_IMPRESSAO.thanks;
+    say(
+      [
+        ceo(first, 'ceo-feliz-a'),
+        ceo(last, 'ceo-feliz-b', { badge: `+${MISSAO_IMPRESSAO.xp} XP · Missão concluída!`, continueLabel: 'Foi um prazer, chefe!' }),
+      ],
+      async () => {
+        const sc = scene();
+        if (!sc) return;
+        sc.setFrozen(true);
+        setPhase('dialog');
+        await Promise.all([sc.cheer(), sc.ceoCelebrates()]);
+        if (!alive.current) return;
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_IMPRESSAO.id, xp: MISSAO_IMPRESSAO.xp, success: true });
       },
     );
   };
@@ -2491,7 +2659,7 @@ function OfficeDay({
     },
     pc: openStation,
     box: openBox,
-    spot: (id) => (fase === 4 ? onSpotQ(id) : fase === 3 ? onSpotP1(id) : fase === 2 ? onSpotF2(id) : onSpot(id)),
+    spot: (id) => (fase === 4 ? (q2Ref.current === 'off' ? onSpotQ(id) : onSpotQ2(id)) : fase === 3 ? onSpotP1(id) : fase === 2 ? onSpotF2(id) : onSpot(id)),
     pickup: (id, at) => (fase === 3 ? pickPart(id, at) : pickUp(id)),
     room: (r) => {
       if (!started.current) {
@@ -2508,6 +2676,7 @@ function OfficeDay({
       if (r?.id === 'copa' && p2Ref.current === 'thirsty' && phaseRef.current === 'explore') void ritaRuns();
       if (r?.id === 'reunioes' && p4Ref.current === 'called' && phaseRef.current === 'explore') meetBoss4();
       if (r?.id === 'reunioes' && q1Ref.current === 'called' && phaseRef.current === 'explore') meetBoss41();
+      if (r?.id === 'reunioes' && q2Ref.current === 'carrying' && phaseRef.current === 'explore') void deliverCopies();
       if (r?.id === 'entrada' && m6Ref.current === 'armed') void lockUp();
       if (r?.id === 'entrada' && fEndRef.current === 'leaving') void leaveDay2();
       if (r?.id !== 'banheiro' && p5Ref.current === 'exit') startDay3End();
@@ -2520,7 +2689,30 @@ function OfficeDay({
   // ------------------------------------------------------------ tela
 
   let objective: { title: string; text: string; done: boolean };
-  if (fase === 4) {
+  if (fase === 4 && q2 !== 'off') {
+    const title = `Fase 4 · Missão 2: ${MISSAO_IMPRESSAO.title}.`;
+    if (q2 === 'done')
+      objective = {
+        title: 'Missão concluída:',
+        text: `${MISSAO_IMPRESSAO.title} (+${MISSAO_IMPRESSAO.xp} XP). A reunião está salva! Explore o escritório à vontade.`,
+        done: true,
+      };
+    else
+      objective = {
+        title,
+        text:
+          q2 === 'carrying'
+            ? OBJETIVOS.levarCopias
+            : q2 === 'printed'
+              ? OBJETIVOS.pegarCopias
+              : printer.on
+                ? OBJETIVOS.imprimir
+                : pcSeen
+                  ? OBJETIVOS.impressoraCabos
+                  : OBJETIVOS.impressaoPc,
+        done: false,
+      };
+  } else if (fase === 4) {
     const title = `Fase 4 · Missão 1: ${MISSAO_PROJETOR.title}.`;
     if (q1 === 'done')
       objective = { title: 'Missão concluída:', text: `${MISSAO_PROJETOR.title} (+${MISSAO_PROJETOR.xp} XP). Explore o escritório à vontade.`, done: true };
@@ -2727,6 +2919,14 @@ function OfficeDay({
             </span>
           </span>
         )}
+        {q2 === 'carrying' && (
+          <span className="office-parts is-full" title="Cópias impressas na mão">
+            <span aria-hidden="true">📄</span>
+            <span>
+              <strong>10</strong> cópias
+            </span>
+          </span>
+        )}
         {f5 === 'pending' && (
           <button type="button" className="office-phone-hud" disabled={phase !== 'explore'} onClick={openPhone}>
             📱 Celular
@@ -2930,6 +3130,8 @@ function OfficeDay({
           />
         )}
         {phase === 'projetor' && <ProjetorModal state={setup} onChange={setSetup} onClose={closeProjector} />}
+        {phase === 'pcImpressao' && <PcImpressaoModal state={printer} onChange={setPrinter} onClose={closePcImpressao} />}
+        {phase === 'impressora' && <ImpressoraModal state={printer} onChange={setPrinter} onClose={closeImpressora} />}
         {phase === 'dreamP5' && (
           <SonhoOverlay heading={MISSAO_BANHEIRO.dreamHeading} game={bathroomWordSearch ?? CACA_PALAVRAS_BANHEIRO_PADRAO} onClose={finishDream} />
         )}

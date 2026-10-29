@@ -6,7 +6,7 @@ import DesktopModal from '../src/mission/sistemas/DesktopModal';
 
 // ?tempo=30 encurta a missão 2; ?missao=3 (ou 2 a 6) começa direto nessa missão (útil para testar);
 // ?sistema=xp (win7, win10, win11, ubuntu, mint) abre só a tela de um computador da missão 6;
-// ?fase=2 começa direto no 2º dia (fase 2); ?fase=2&missao=2 (a 5) começa nessa missão da fase 2 e ?fase=2&missao=6 no fim do dia (o chefe dispensando); ?fase=3 começa no 3º dia e ?fase=3&missao=2 nas palavras-cruzadas da Rita ?fase=3&missao=3 na montagem dos 3 computadores, ?fase=3&missao=4 no quiz da reunião de alinhamento, ?fase=3&missao=5 na corrida até o banheiro e ?fase=4 começa no 4º dia (o projetor e a webcam)
+// ?fase=2 começa direto no 2º dia (fase 2); ?fase=2&missao=2 (a 5) começa nessa missão da fase 2 e ?fase=2&missao=6 no fim do dia (o chefe dispensando); ?fase=3 começa no 3º dia e ?fase=3&missao=2 nas palavras-cruzadas da Rita ?fase=3&missao=3 na montagem dos 3 computadores, ?fase=3&missao=4 no quiz da reunião de alinhamento, ?fase=3&missao=5 na corrida até o banheiro, ?fase=4 começa no 4º dia (o projetor e a webcam) e ?fase=4&missao=2 nas 10 cópias da impressora
 const params = new URLSearchParams(location.search);
 const tempo = Number(params.get('tempo')) || undefined;
 const missao = Number(params.get('missao'));

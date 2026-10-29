@@ -82,6 +82,11 @@ export const OBJETIVOS = {
   embora3: 'Fim do expediente! Saia da empresa pela porta principal',
   reuniao41: 'Vá até a Sala de Reuniões, rápido: o chefe está desesperado!',
   projetor: 'Chegue perto da caixa na Sala de Reuniões e instale o projetor e a webcam',
+  impressaoPc: 'Vá até o PC da Sala de Impressão (corredor da esquerda) e veja a impressora',
+  impressoraCabos: 'A impressora está off-line: chegue perto dela (a Copiadora, na Sala de Impressão) e veja os cabos',
+  imprimir: 'A impressora ligou! Volte ao PC, abra o documento Reunião e imprima 10 cópias',
+  pegarCopias: 'Pegue as 10 cópias na impressora',
+  levarCopias: 'Leve as 10 cópias ao chefe, na Sala de Reuniões',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -494,5 +499,30 @@ export const MISSAO_PROJETOR = {
   thanks: [
     'Está funcionando! A imagem na parede, nítida, e a câmera mostrando a sala… Você salvou a minha reunião!',
     'Muito, MUITO obrigado, estagiário! Vou contar para o Marcos que ele tem um substituto à altura.',
+  ],
+} as const;
+
+/** Fase 4, missão 2: imprimir 10 cópias do documento "Reunião" (a impressora da Sala de Impressão está off-line). */
+export const MISSAO_IMPRESSAO = {
+  id: 'imprimir-copias',
+  title: 'As 10 cópias da reunião',
+  xp: 100,
+  call: [
+    'Ah, e o trabalho ainda não acabou! Para a vídeo chamada eu preciso de 10 cópias impressas do documento "Reunião".',
+    'Ele está na área de trabalho do PC da Sala de Impressão. Só que a impressora nova não foi instalada nem configurada… era o Marcos que ia fazer isso!',
+    'Imprime as 10 cópias e traz aqui para mim, por favor. Os clientes já vão entrar!',
+  ],
+  go: 'Vá até o PC da Sala de Impressão, no corredor da esquerda (o "!" mostra aonde ir).',
+  offline: 'A impressora está off-line… Melhor ir até ela, ali na Copiadora, e ver o que está acontecendo.',
+  cables: 'Os cabos de rede e de energia estão no chão, soltos da impressora!',
+  online: 'Impressora ligada! Agora volte ao PC: ela deve aparecer on-line.',
+  alreadyOn: 'A impressora está ligada e on-line. Agora é no PC: abra o documento Reunião e imprima.',
+  printed: '🖨️ As 10 cópias saíram! Pegue na impressora.',
+  takeFirst: 'As cópias já saíram: é só pegar na impressora.',
+  picked: '📄 Peguei as 10 cópias! Agora é levar para o chefe, na Sala de Reuniões.',
+  notYet: 'Quando quiser continuar, é só chegar perto de novo.',
+  thanks: [
+    'As 10 cópias, quentinhas da impressora! E você ainda instalou a impressora nova sozinho?!',
+    'A reunião está salva! Muito, MUITO obrigado, estagiário! Hoje você foi o Marcos, o técnico e o herói da empresa!',
   ],
 } as const;

@@ -1007,6 +1007,32 @@ direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 
 - **Arte:** a mesa, o projetor, a webcam, os rolos dos cabos e os desenhos da caixa são camadas desenhadas pelo
   `scripts/gerar-arte.py` (`src/assets/projetor/`); os lugares, as entradas e as pontas ficam em `cena.json`.
 
+### Missão 2: as 10 cópias da reunião (+100 XP)
+
+1. Logo depois do projetor, o chefe lembra que o trabalho não acabou: para a vídeo chamada ele precisa de **10 cópias**
+   do documento **"Reunião"**, que está no **PC da Sala de Impressão**, e a impressora nova não foi instalada nem
+   configurada. Aparece uma **mesa com o PC** na Sala de Impressão (só no 4º dia), com o **!** em cima.
+2. Chegando perto do PC, abre o monitor (Windows 10) com a janela **Impressoras e scanners**: a impressora está
+   **Off-line**. Dá para tentar imprimir mesmo assim: o Word avisa que ela está off-line. O **!** passa para a
+   impressora (a **Copiadora** da sala).
+3. Chegando perto da impressora, o ESTAGIÁRIO vê os cabos no chão e abre a **traseira da impressora**: entradas
+   **LAN** (rede), **USB** e **AC** (energia). Os cabos de rede e de energia estão no chão, com a outra ponta já na
+   parede. Arrastar cada ponta até a entrada certa (o cabo de rede na USB não encaixa, e a dica explica por quê) e
+   **✓ Confirmar**: o visor acende e a luz fica verde.
+4. De volta ao PC, a impressora aparece **Pronta (on-line)**. **Dois cliques** no ícone **Reunião** abrem o Word;
+   **Arquivo → Imprimir** mostra a **pré-visualização** da página, a impressora e o campo **Cópias**. Com um número
+   diferente de 10, avisa que o chefe pediu 10; com 10 → **Imprimir** → "Imprimindo… cópia N de 10".
+5. O maço das cópias aparece em cima da impressora: chegar perto **pega as cópias** (**📄 10 cópias** no topo) e o
+   **!** vai para o chefe.
+6. Entrando na **Sala de Reuniões**, o chefe vem buscar, agradece muito (**+100 XP**, *"a reunião está salva!"*) e os
+   dois **comemoram** pulando, com confete.
+
+- **Fechar** o PC ou a impressora antes do fim guarda tudo como está.
+- **Arte:** a traseira da impressora e o visor aceso são desenhados pelo `scripts/gerar-arte.py`
+  (`src/assets/impressora/`, entradas e pontas em `cena.json`); o maço das cópias é o `copias` do atlas.
+- **Para testar:** `?fase=4&missao=2` começa direto nesta missão (o projetor conta como feito). No componente:
+  `<OfficeGame fase={4} startAt={2} />`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -1101,6 +1127,12 @@ direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 
     projetor fora do lugar (dica) → tudo na mesa → VGA na entrada HDMI (não encaixa) → ligar as 5 pontas → **⏻ Ligar**
     → tela de inicialização → imagem na parede, embaçada → instalação do driver → acertar o foco (**Foco OK ✓**) →
     **📷 Câmera** → **Pronto ✓** → o chefe agradece, **+100 XP**, e o ESTAGIÁRIO comemora.
+31. Fase 4, missão 2 (`?fase=4&missao=2`, ou seguindo depois do projetor): o chefe pede as 10 cópias → **!** na mesa
+    nova da Sala de Impressão → PC: impressora **Off-line** → dois cliques em **Reunião** → **Arquivo → Imprimir** →
+    **Imprimir** (avisa que está off-line) → **Sair** → **!** na impressora → traseira: **✓ Confirmar** sem cabos
+    (diz o que falta) → rede na USB (não encaixa) → rede na LAN e energia na AC → **✓ Confirmar** (visor aceso) → PC:
+    **Pronta (on-line)** → Cópias 5 (avisa) → Cópias 10 → **Imprimir** → cópias em cima da impressora → pegar
+    (**📄 10 cópias**) → Sala de Reuniões → o chefe vem, agradece, **+100 XP**, e os dois comemoram.
 
 ## Correções incluídas desde a Fase 1
 

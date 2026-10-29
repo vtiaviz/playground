@@ -2923,3 +2923,10 @@ tr.is-marked .office-clip-row {
 .office-pj-stage .office-montar-port {
   pointer-events: auto;
 }
+
+/* ---------------------------------------------------------------- fase 4, missão 2: a traseira da impressora */
+.office-imp-card {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'head' 'bench';
+  width: min(920px, 100%);
+}
