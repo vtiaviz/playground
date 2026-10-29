@@ -7,8 +7,9 @@ import { useFullscreen } from './useFullscreen';
 export interface TabletOverlayProps {
   heading: string;
   game: MissionGame;
-  /** Jogo da biblioteca na tela: o quiz da Elisa (padrão, fase 1) ou a forca do Marcos (fase 2, missão 4). */
-  gameType?: 'QUIZ' | 'FORCA';
+  /** Jogo da biblioteca na tela: o quiz da Elisa (padrão, fase 1), a forca do Marcos (fase 2, missão 4) ou as
+   * palavras-cruzadas da Rita (fase 3, missão 2). */
+  gameType?: 'QUIZ' | 'FORCA' | 'CRUZADAS';
   /** Quem segura o tablet (cor da manga): a Elisa (vermelha) ou o ESTAGIÁRIO (verde). */
   holder?: 'elisa' | 'estagiario';
   /** Texto do botão depois de terminar o jogo. */
@@ -25,6 +26,7 @@ const OUT = '#1c1626';
 const APPS = {
   QUIZ: { icon: '📝', invalid: 'Este quiz está com a configuração inválida.' },
   FORCA: { icon: '🎯', invalid: 'Esta forca está com a configuração inválida.' },
+  CRUZADAS: { icon: '✏️', invalid: 'Estas palavras-cruzadas estão com a configuração inválida.' },
 } as const;
 
 /** Mão segurando a borda do tablet (pixel art). A da direita é espelhada. */
@@ -58,7 +60,8 @@ const clock = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', mi
 
 /**
  * Modal em forma de tablet (pixel art: moldura grossa, câmera, botão de início e as mãos de quem segura), com um
- * jogo da biblioteca na tela: o quiz da "prova de informática" da Elisa ou a forca do tablet do Marcos.
+ * jogo da biblioteca na tela: o quiz da "prova de informática" da Elisa, a forca do tablet do Marcos ou as
+ * palavras-cruzadas da Rita.
  */
 export default function TabletOverlay({
   heading,

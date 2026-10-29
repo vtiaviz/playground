@@ -39,6 +39,8 @@ import {
   IT_WAIT,
   IT_TABLET_FLOOR,
   IT_TABLET_DESK,
+  WATER_SPOT,
+  besidePlayer,
   landingSpots,
   PICKUP_RADIUS,
   type Furniture,
@@ -129,6 +131,8 @@ export class OfficeScene extends Phaser.Scene {
   private boardCards!: Phaser.GameObjects.Image;
   private walkerAlert: Phaser.GameObjects.Image | null = null;
   private tablet: Phaser.GameObjects.Image | null = null;
+  private rhTablet: Phaser.GameObjects.Image | null = null;
+  private rhAlert: Phaser.GameObjects.Image | null = null;
   private night!: Phaser.GameObjects.Rectangle;
   private siren!: Phaser.GameObjects.Rectangle;
   private screenLights = new Map<string, Phaser.GameObjects.Image[]>();
@@ -1406,6 +1410,86 @@ export class OfficeScene extends Phaser.Scene {
     return true;
   }
 
+  // ------------------------------------------------------------ fase 3, missão 2: a água e as palavras-cruzadas da Rita
+
+  /** A Rita aparece parada num ponto (sem andar), virada para `facing`. */
+  rhPlace(at: Point, facing: Facing = 'down') {
+    this.tweens.killTweensOf(this.rh);
+    this.rh.setPosition(at.x, at.y).setDepth(at.y);
+    this.rhFace(facing);
+  }
+
+  /** Tablet na mão da Rita (de frente, parada) e o "!" em cima dela (esperando o ESTAGIÁRIO). */
+  setRhTablet(on: boolean, alert = false) {
+    this.rhTablet?.destroy();
+    this.rhTablet = null;
+    this.rhAlert?.destroy();
+    this.rhAlert = null;
+    const r = this.rh;
+    if (on) {
+      this.rhFace('down');
+      this.rhTablet = this.add.image(r.x, r.y - 16, 'moveis', 'tablet-mao').setDepth(r.y + 1);
+    }
+    if (alert) {
+      const icon = this.add.image(r.x + 14, r.y - FEET_Y - 8, 'moveis', 'alerta').setDepth(100000);
+      this.tweens.add({ targets: icon, y: icon.y - 5, duration: 450, yoyo: true, repeat: -1 });
+      this.rhAlert = icon;
+    }
+  }
+
+  /** Onde a Rita está (para a área de conversa em volta dela). */
+  rhAt(): Point {
+    return { x: this.rh.x, y: this.rh.y };
+  }
+
+  /** A Rita sai correndo atrás do ESTAGIÁRIO e para do lado dele, de frente para ele. */
+  async rhRunToPlayer() {
+    this.setRhTablet(false);
+    const p = { x: this.player.x, y: this.player.y };
+    // para atrás dele (do lado de onde ele veio)
+    const back = { down: [0, -1], up: [0, 1], left: [1, 0], right: [-1, 0] }[this.facing];
+    const to = besidePlayer(p, { x: p.x + back[0] * 100, y: p.y + back[1] * 100 });
+    await this.walkSprite(this.rh, RH_LOOK, to, undefined, RUN_SPEED * 1.1);
+    const dx = p.x - to.x;
+    const dy = p.y - to.y;
+    this.rhFace(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down');
+  }
+
+  /** A Rita anda até um ponto e fica de frente, com o tablet (e o "!" se ainda espera ajuda). */
+  async rhWaitWithTablet(at: Point, alert: boolean) {
+    this.setRhTablet(false);
+    await this.walkSprite(this.rh, RH_LOOK, at);
+    this.setRhTablet(true, alert);
+  }
+
+  /** O ESTAGIÁRIO leva um susto: vira para a Rita, dá um pulinho e aparece o "!" em cima dele. */
+  async startle() {
+    const p = this.player;
+    const dx = this.rh.x - p.x;
+    const dy = this.rh.y - p.y;
+    this.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
+    p.anims.stop();
+    p.setFrame(ROW[this.facing] * FRAME.cols + 2);
+    const icon = this.add.image(p.x + 14, p.y - FEET_Y - 10, 'moveis', 'alerta').setDepth(100000).setScale(1.3);
+    this.tweens.add({ targets: p, y: p.y - 12, duration: 120, yoyo: true, ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: icon, y: icon.y - 8, duration: 200, yoyo: true, repeat: 3, onComplete: () => icon.destroy() });
+    this.cameras.main.shake(200, 0.004);
+    await this.wait(900);
+  }
+
+  /** O ESTAGIÁRIO vai até o bebedouro e bebe água (gotinhas subindo). */
+  async drinkWater() {
+    await this.playerRunTo(WATER_SPOT);
+    this.facing = 'up';
+    const p = this.player;
+    p.setFrame(ROW.up * FRAME.cols + 2);
+    for (let k = 0; k < 3; k++) {
+      const drop = this.add.circle(p.x + (k - 1) * 6, p.y - FEET_Y - 4, 3, 0x6cc6ff).setDepth(100000);
+      this.tweens.add({ targets: drop, y: drop.y - 22, alpha: 0, duration: 700, delay: k * 250, onComplete: () => drop.destroy() });
+    }
+    await this.wait(1500);
+  }
+
   private wait(ms: number) {
     return new Promise<void>((resolve) => this.time.delayedCall(ms, resolve));
   }
@@ -1465,7 +1549,7 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   /** Anda pelo caminho calculado, com a animação da direção de cada trecho. */
-  private walkSprite(s: Phaser.GameObjects.Sprite, look: number, to: Point, onStep?: () => void) {
+  private walkSprite(s: Phaser.GameObjects.Sprite, look: number, to: Point, onStep?: () => void, speed = WALK_SPEED) {
     this.tweens.killTweensOf(s); // um caminho novo substitui o anterior
     const path = findPath({ x: s.x, y: s.y }, to);
     path.push(to);
@@ -1473,6 +1557,7 @@ export class OfficeScene extends Phaser.Scene {
       const step = (k: number) => {
         if (k >= path.length || !s.active) {
           s.anims.stop();
+          s.anims.timeScale = 1;
           resolve();
           return;
         }
@@ -1483,11 +1568,12 @@ export class OfficeScene extends Phaser.Scene {
         if (dist < 1) return step(k + 1);
         const facing: Facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
         s.anims.play(`colega${look}-${facing}`, true);
+        s.anims.timeScale = speed / WALK_SPEED;
         this.tweens.add({
           targets: s,
           x: p.x,
           y: p.y,
-          duration: (dist / WALK_SPEED) * 1000,
+          duration: (dist / speed) * 1000,
           onUpdate: () => {
             s.setDepth(s.y);
             onStep?.();

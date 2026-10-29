@@ -40,6 +40,7 @@ export default function OfficePage() {
   const [wordSearchId, setWordSearchId] = useState<string>('');
   const [hangmanId, setHangmanId] = useState<string>('');
   const [surpriseId, setSurpriseId] = useState<string>('');
+  const [ritaId, setRitaId] = useState<string>('');
 
   useEffect(() => {
     api<{ games: SavedGame[] }>('/games')
@@ -53,6 +54,9 @@ export default function OfficePage() {
         // exercício surpresa: de preferência um quiz diferente do da Elisa
         const quizIds = r.games.filter((g) => g.gameType === 'QUIZ').map((g) => g.id);
         setSurpriseId(quizIds[1] ?? quizIds[0] ?? '');
+        // cruzadas da Rita: de preferência uma diferente da do CEO
+        const crosswordIds = r.games.filter((g) => g.gameType === 'CRUZADAS').map((g) => g.id);
+        setRitaId(crosswordIds[1] ?? crosswordIds[0] ?? '');
       })
       .catch((e) => {
         setLibrary([]);
@@ -71,6 +75,7 @@ export default function OfficePage() {
   const hangmen = library?.filter((g) => g.gameType === 'FORCA') ?? null;
   const hangman = hangmen?.find((g) => g.id === hangmanId) ?? null;
   const surprise = quizzes?.find((g) => g.id === surpriseId) ?? null;
+  const ritaCrossword = crosswords?.find((g) => g.id === ritaId) ?? null;
 
   return (
     <section className="panel">
@@ -85,7 +90,8 @@ export default function OfficePage() {
             mainframe, tablets e smartphones; o caça-palavras do quadro da Sala de Reuniões; e as 10 placas de
             desenvolvimento (Arduino e Raspberry Pi) escondidas nos armários com lupa; a forca que ficou aberta no tablet
             quando o Marcos cochilou; e o exercício surpresa do curso, que chega pelo WhatsApp no celular do estagiário.
-            No fim, o chefe dispensa o estagiário e aparece o resumo do 2º dia.
+            No fim, o chefe dispensa o estagiário e aparece o resumo do 2º dia. No 3º dia (fase 3), as peças de hardware da
+            lista do Marcos e as palavras-cruzadas do tablet da Rita, na Copa.
           </p>
         </div>
         <GamePicker
@@ -130,6 +136,13 @@ export default function OfficePage() {
           onChange={setSurpriseId}
           emptyLabel="Jogo de exemplo (sem quiz salvo)"
         />
+        <GamePicker
+          label="Tablet da Rita, 3º dia (Palavras-cruzadas)"
+          games={crosswords}
+          value={ritaId}
+          onChange={setRitaId}
+          emptyLabel="Jogo de exemplo (sem cruzadas salvas)"
+        />
       </div>
       {error && (
         <p className="hint" role="alert">
@@ -142,13 +155,14 @@ export default function OfficePage() {
         <Suspense fallback={<p className="hint">Carregando o escritório…</p>}>
           {/* key: trocar um jogo reinicia as missões */}
           <OfficeGame
-            key={`${crosswordId || 'exemplo'}:${phrasesId || 'exemplo'}:${quizId || 'exemplo'}:${wordSearchId || 'exemplo'}:${hangmanId || 'exemplo'}:${surpriseId || 'exemplo'}`}
+            key={`${crosswordId || 'exemplo'}:${phrasesId || 'exemplo'}:${quizId || 'exemplo'}:${wordSearchId || 'exemplo'}:${hangmanId || 'exemplo'}:${surpriseId || 'exemplo'}:${ritaId || 'exemplo'}`}
             crossword={asMissionGame(crossword)}
             phrases={asMissionGame(phrase)}
             quiz={asMissionGame(quiz)}
             wordSearch={asMissionGame(wordSearch)}
             hangman={asMissionGame(hangman)}
             surpriseQuiz={asMissionGame(surprise)}
+            ritaCrossword={asMissionGame(ritaCrossword)}
           />
         </Suspense>
       )}

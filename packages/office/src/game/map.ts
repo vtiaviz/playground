@@ -488,3 +488,26 @@ export const IT_TABLET_ZONE: Rect = { x: IT_TABLET_FLOOR.x - 24, y: IT_TABLET_FL
 export const IT_TABLET_DESK = { x: itDesk.x + itDesk.w - 22, y: itDesk.y + 20 };
 /** No corredor em cima da Sala de TI, saindo pela porta: para onde o ESTAGIÁRIO corre. */
 export const IT_EXIT = { x: t(11), y: t(20.5) };
+
+// ---------------------------------------------------------------- fase 3, missão 2: a água e as palavras-cruzadas da Rita
+
+const cooler = FURNITURE.find((f) => f.label === 'Bebedouro');
+if (!cooler?.foot) throw new Error('Bebedouro faltando no mapa');
+/** Na frente do bebedouro da Copa: onde o ESTAGIÁRIO bebe água. */
+export const WATER_SPOT = { x: cooler.x + cooler.w / 2, y: cooler.foot.y + cooler.foot.h + 16 };
+/** Na Copa, perto da geladeira: onde a Rita fica esperando com o tablet se o ESTAGIÁRIO não ajudar agora. */
+export const COPA_RITA_WAIT = COPA_CHAT;
+
+/** Ponto livre colado no ESTAGIÁRIO, do lado mais perto de `from` (para alguém parar atrás dele). */
+type Point = { x: number; y: number };
+
+export function besidePlayer(player: Point, from: Point, gap = 30): Point {
+  const sides = [
+    { x: player.x - gap, y: player.y },
+    { x: player.x + gap, y: player.y },
+    { x: player.x, y: player.y - gap },
+    { x: player.x, y: player.y + gap },
+  ].filter((p) => isFree(p.x, p.y));
+  sides.sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y));
+  return sides[0] ?? player;
+}

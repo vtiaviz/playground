@@ -5,6 +5,7 @@ import quizPadrao from '../game/quiz-padrao.json';
 import cacaPalavrasPadrao from '../game/caca-palavras-padrao.json';
 import forcaPadrao from '../game/forca-padrao.json';
 import quizSurpresaPadrao from '../game/quiz-surpresa-padrao.json';
+import cruzadasRitaPadrao from '../game/cruzadas-rita-padrao.json';
 
 /** Um jogo salvo em "Meus jogos" usado numa missão (palavras-cruzadas, complete as frases…). */
 export interface MissionGame {
@@ -67,6 +68,8 @@ export const OBJETIVOS = {
   pecas: 'Procure as peças da lista nos móveis com uma lupa em cima e chegue perto das que caírem no chão',
   levarPecas: 'Mochila completa! Leve as peças para o Marcos, na Sala de TI',
   forcaTablet: 'Termine a forca do tablet do Marcos: acerte as 5 palavras (chegue perto do tablet no chão)',
+  copaAgua: 'Bateu uma sede: vá até a Copa beber água',
+  ritaCruzadas: 'Fale com a Rita, na Copa, para ajudar com as palavras-cruzadas do tablet',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -367,3 +370,26 @@ export const MISSAO_PECAS = {
     n ? `As outras ${n} estão certas: essas eu já guardei aqui. Procure as que faltam e me traga.` : 'Procure as certas e me traga.',
   success: 'Todas certinhas, iguais à lista! Muito obrigado pela ajuda, estagiário!',
 } as const;
+
+/** Fase 3, missão 2: com sede, o ESTAGIÁRIO vai até a Copa; a Rita corre atrás dele para pedir ajuda nas palavras-cruzadas. */
+export const MISSAO_CRUZADAS_RITA = {
+  id: 'cruzadas-rita',
+  title: 'As palavras-cruzadas da Rita',
+  xp: 100,
+  thirsty: 'Ufa, quanta peça! Bateu uma sede… Vou até a Copa beber uma água.',
+  shout: '— ESTAGIÁRIO! Espera aí!',
+  startled: 'AAAH! Que susto!',
+  sorry: 'Desculpa, desculpa! Eu te vi passando para a Copa e vim correndo atrás de você.',
+  calm: 'Ufa… tudo bem, Rita. Aconteceu alguma coisa?',
+  plea: 'Estou há um tempão travada nestas palavras-cruzadas do tablet. Me disseram que você é ótimo nisso!',
+  question: 'Você vai ajudar a Rita com as palavras-cruzadas?',
+  declined: 'Tudo bem… vou ficar aqui na Copa tentando. Se mudar de ideia, é só falar comigo!',
+  again: 'Voltou! Vamos tentar de novo as palavras-cruzadas?',
+  gaveUp: 'Ficou difícil, né? Sem problema: quando quiser tentar de novo, é só falar comigo aqui na Copa.',
+  success: 'Completou tudinho! Muito obrigada, estagiário! Agora volto para o RH bem mais tranquila.',
+  water: 'De nada, Rita! Agora sim… a minha água.',
+  drink: '💧 Glub, glub… Que água geladinha!',
+} as const;
+
+/** Usadas quando nenhuma palavra-cruzada da biblioteca é escolhida para a Rita (as peças do computador). */
+export const CRUZADAS_RITA_PADRAO: MissionGame = { title: cruzadasRitaPadrao.title, config: cruzadasRitaPadrao };

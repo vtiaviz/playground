@@ -526,6 +526,7 @@ React abre a tarefa, e a nota vai para a API como nos outros jogos.
       tests/missao-f2m5.test.ts  quiz de exemplo do exercício surpresa, nota mínima de 70% e as mensagens
       tests/fim-dia2.test.ts     dispensa do chefe, saída para a calçada e o resumo das 5 missões do 2º dia
       tests/pecas.test.ts        lista com 8 peças e as parecidas (desenho próprio), adesivos, onde as peças caem e a conferência
+      tests/missao-f3m2.test.ts  cruzadas de exemplo da Rita, a corrida do RH até a porta da Copa, bebedouro e o canto da Rita
 
 - **Arte própria.** Tudo é pixel art desenhada pelo `scripts/gerar-arte.py` (tiles de 32 px, 1 pixel de arte = 2 px).
   As imagens de referência (planta do escritório e folhas de personagens) serviram só de inspiração para a disposição
@@ -878,6 +879,26 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
   `scripts/gerar-arte.py`; as marcas são inventadas. O texto do adesivo é escrito pelo React em cima do desenho.
 - **Para testar:** `?fase=3` começa direto no 3º dia. No componente: `<OfficeGame fase={3} />`.
 
+### Missão 2: as palavras-cruzadas da Rita (+100 XP)
+
+1. Desde o começo do 3º dia, a **Rita** está no RH fazendo palavras-cruzadas no tablet. Depois das peças, o
+   ESTAGIÁRIO fica com sede: *"Vou até a Copa beber uma água."*
+2. Ao entrar na Copa, aparece *"— ESTAGIÁRIO! Espera aí!"* e a Rita sai **correndo** do RH atrás dele. Ele **leva um
+   susto** (vira, dá um pulinho e aparece o **!**), mas logo se acalma: ela só quer ajuda com as palavras-cruzadas.
+3. Abre o balão **"Você vai ajudar a Rita com as palavras-cruzadas?"**. **Sim** → modal no formato do **tablet**, com as
+   palavras-cruzadas da biblioteca na tela. **Não** → a Rita fica esperando na Copa, com o tablet e o **!**; é só
+   chegar perto dela para ela perguntar de novo.
+4. Completou as palavras-cruzadas → **Devolver o tablet** → *"Muito obrigada!"* **+100 XP**. A Rita volta para o RH e o
+   ESTAGIÁRIO, enfim, bebe água no bebedouro.
+5. **Desistir** no tablet não perde XP: a Rita diz que pode tentar de novo e fica esperando na Copa (refazer quantas
+   vezes quiser).
+
+- **Qual jogo:** na página do instrutor, **"Tablet da Rita, 3º dia (Palavras-cruzadas)"** mostra as palavras-cruzadas
+  de **Meus jogos** (de preferência uma diferente da do CEO). Sem nenhuma salva, usa uma de exemplo com as peças do
+  computador, a aula do dia: `packages/office/src/game/cruzadas-rita-padrao.json`.
+- **Para testar:** `?fase=3&missao=2` começa direto nesta missão (a das peças conta como feita). No componente:
+  `<OfficeGame fase={3} startAt={2} ritaCrossword={...} />`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -947,6 +968,11 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
     a memória certa → **Guardar e deixar a da mochila** (a DDR3 cai no chão) → no armário da Sala de Reuniões, o SSD
     SATA → **Guardar** → pegar as outras (🧰 8|8) → Sala de TI → o Marcos explica o SSD errado, **−50 XP**, 🧰 7|8 →
     pegar o SSD M.2 no armário da Recepção → entregar → **+100 XP** e comemoração.
+26. Fase 3, missão 2 (`?fase=3&missao=2`, ou seguindo depois das peças): "bateu uma sede" → ir até a Copa → a Rita
+    vem correndo do RH, o ESTAGIÁRIO se assusta (pulinho e **!**) → conversa → balão: **Não** → a Rita fica na Copa
+    com o tablet e o **!** → chegar perto dela → **Sim** → tablet com as palavras-cruzadas → **Começar** → **✕
+    Desistir** → ela diz que pode tentar de novo → chegar perto → **Sim** → completar → **Devolver o tablet** →
+    **+100 XP**, a Rita volta para o RH e o ESTAGIÁRIO bebe água.
 
 ## Correções incluídas desde a Fase 1
 
