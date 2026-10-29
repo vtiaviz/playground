@@ -41,6 +41,7 @@ import {
   IT_TABLET_DESK,
   WATER_SPOT,
   PC_BOXES,
+  MEETING_SEAT,
   besidePlayer,
   landingSpots,
   PICKUP_RADIUS,
@@ -134,6 +135,9 @@ export class OfficeScene extends Phaser.Scene {
   private tablet: Phaser.GameObjects.Image | null = null;
   private rhTablet: Phaser.GameObjects.Image | null = null;
   private rhAlert: Phaser.GameObjects.Image | null = null;
+  private ceoWalker: Phaser.GameObjects.Sprite | null = null;
+  private ceoWalkerAlert: Phaser.GameObjects.Image | null = null;
+  private seated: Phaser.GameObjects.Image | null = null;
   private pcBoxes: { img: Phaser.GameObjects.Image; alert: Phaser.GameObjects.Image | null }[] = [];
   private night!: Phaser.GameObjects.Rectangle;
   private siren!: Phaser.GameObjects.Rectangle;
@@ -1182,7 +1186,7 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   /** O ESTAGIÁRIO sai correndo até `to`, desviando dos móveis (travado, sem o jogador controlar). */
-  async playerRunTo(to: Point) {
+  async playerRunTo(to: Point, speed = RUN_SPEED) {
     const p = this.player;
     this.acting = true;
     const path = findPath({ x: p.x, y: p.y }, to);
@@ -1194,13 +1198,13 @@ export class OfficeScene extends Phaser.Scene {
       if (dist < 1) continue;
       this.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
       p.anims.play(`walk-${this.facing}`, true);
-      p.anims.timeScale = 1.6;
+      p.anims.timeScale = speed === RUN_SPEED ? 1.6 : 1;
       await new Promise<void>((resolve) =>
         this.tweens.add({
           targets: p,
           x: pt.x,
           y: pt.y,
-          duration: (dist / RUN_SPEED) * 1000,
+          duration: (dist / speed) * 1000,
           onUpdate: () => {
             p.setDepth(p.y);
             this.shadow.setPosition(p.x, p.y - 1).setDepth(p.y - 1);
@@ -1490,6 +1494,77 @@ export class OfficeScene extends Phaser.Scene {
       this.tweens.add({ targets: drop, y: drop.y - 22, alpha: 0, duration: 700, delay: k * 250, onComplete: () => drop.destroy() });
     }
     await this.wait(1500);
+  }
+
+  // ------------------------------------------------------------ fase 3, missão 4: o quiz na Sala de Reuniões
+
+  /** O CEO levanta da Diretoria (se estiver sentado) e anda até um ponto; com `alert`, fica com o "!" em cima. */
+  async ceoWalkTo(to: Point, facing: Facing, alert = false) {
+    let s = this.ceoWalker;
+    if (!s) {
+      this.setCeoMood('tranquilo');
+      this.ceo.setFrame('cadeira-vazia').setY(this.ceoBaseY + 4);
+      s = this.add.sprite(CEO_SEAT.x, CEO_SEAT.y, 'colegas', CEO_LOOK * 4 * FRAME.cols + 2).setOrigin(0.5, FEET_Y / FRAME.h);
+      this.ceoWalker = s;
+    }
+    this.setCeoWalkerAlert(false);
+    await this.walkSprite(s, CEO_LOOK, to);
+    if (!s.active) return;
+    s.setFrame((CEO_LOOK * 4 + ROW[facing]) * FRAME.cols + 2);
+    this.setCeoWalkerAlert(alert);
+  }
+
+  setCeoWalkerAlert(on: boolean) {
+    this.ceoWalkerAlert?.destroy();
+    this.ceoWalkerAlert = null;
+    const s = this.ceoWalker;
+    if (!on || !s) return;
+    const icon = this.add.image(s.x + 14, s.y - FEET_Y - 8, 'moveis', 'alerta').setDepth(100000);
+    this.tweens.add({ targets: icon, y: icon.y - 5, duration: 450, yoyo: true, repeat: -1 });
+    this.ceoWalkerAlert = icon;
+  }
+
+  /** O CEO (em pé) vira para o ESTAGIÁRIO. */
+  ceoFacePlayer() {
+    const s = this.ceoWalker;
+    if (!s) return;
+    const dx = this.player.x - s.x;
+    const dy = this.player.y - s.y;
+    const facing: Facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
+    s.setFrame((CEO_LOOK * 4 + ROW[facing]) * FRAME.cols + 2);
+  }
+
+  /** O CEO volta para a cadeira dele na Diretoria. */
+  async ceoBackToSeat() {
+    const s = this.ceoWalker;
+    if (!s) return;
+    this.setCeoWalkerAlert(false);
+    await this.walkSprite(s, CEO_LOOK, CEO_SEAT);
+    s.destroy();
+    this.ceoWalker = null;
+    this.setCeoMood('tranquilo');
+  }
+
+  /** O ESTAGIÁRIO vai até a cadeira da mesa de reunião e senta (de frente, a mesa esconde as pernas). */
+  async sitAtMeeting() {
+    await this.playerRunTo(MEETING_SEAT.approach, SPEED);
+    const p = this.player;
+    p.setVisible(false);
+    this.shadow.setVisible(false);
+    const { seat, depth } = MEETING_SEAT;
+    this.seated?.destroy();
+    this.seated = this.add.image(seat.x, seat.y, 'moveis', 'estagiario-sentado').setOrigin(0.5, 1).setDepth(depth);
+    this.facing = 'down';
+    await this.wait(350);
+  }
+
+  /** Levanta da cadeira da mesa de reunião e fica em pé atrás dela. */
+  leaveMeetingSeat() {
+    this.seated?.destroy();
+    this.seated = null;
+    this.player.setPosition(MEETING_SEAT.approach.x, MEETING_SEAT.approach.y).setVisible(true);
+    this.shadow.setPosition(MEETING_SEAT.approach.x, MEETING_SEAT.approach.y - 1).setVisible(true);
+    this.facing = 'down';
   }
 
   // ------------------------------------------------------------ fase 3, missão 3: as 3 caixas dos computadores

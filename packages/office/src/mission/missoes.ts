@@ -6,6 +6,7 @@ import cacaPalavrasPadrao from '../game/caca-palavras-padrao.json';
 import forcaPadrao from '../game/forca-padrao.json';
 import quizSurpresaPadrao from '../game/quiz-surpresa-padrao.json';
 import cruzadasRitaPadrao from '../game/cruzadas-rita-padrao.json';
+import quizAlinhamentoPadrao from '../game/quiz-alinhamento-padrao.json';
 
 /** Um jogo salvo em "Meus jogos" usado numa missão (palavras-cruzadas, complete as frases…). */
 export interface MissionGame {
@@ -72,6 +73,8 @@ export const OBJETIVOS = {
   ritaCruzadas: 'Fale com a Rita, na Copa, para ajudar com as palavras-cruzadas do tablet',
   ti33: 'Vá até a Sala de TI: o Marcos está chamando de novo',
   montarPcs: 'Monte os 3 computadores: chegue perto de cada caixa na Sala de TI',
+  reuniao34: 'Vá até a Sala de Reuniões: o chefe está chamando',
+  quizAlinhamento: 'Sente na cadeira da mesa de reunião (perto do quadro) e termine o quiz no notebook',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -411,3 +414,26 @@ export const MISSAO_MONTAR_PCS = {
   built: (title: string, n: number) => `🖥️ ${title}: pronto! (${n}|3)`,
   success: 'Os três ligaram de primeira! Estudante, gamer e escritório, todos prontinhos. Você manda muito bem, estagiário!',
 } as const;
+
+/** Fase 3, missão 4: o chefe chama na Sala de Reuniões para o quiz que vai ser passado na reunião de alinhamento. */
+export const MISSAO_ALINHAMENTO = {
+  id: 'quiz-alinhamento',
+  title: 'O quiz da reunião de alinhamento',
+  xp: 100,
+  /** A partir desta fração de acertos o chefe diz que está no nível esperado (o XP vem de qualquer jeito). */
+  goodRatio: 0.7,
+  call: 'ESTAGIÁRIO, pode vir até a Sala de Reuniões? Preciso de você um minutinho.',
+  briefing: [
+    'Senta aí, por favor. Mais tarde temos a reunião de alinhamento, e este quiz vai ser passado nela.',
+    'Precisamos saber se você está com o nível de acordo com o esperado. Responda com calma, no notebook da mesa.',
+  ],
+  gaveUp: 'Sem problema: o quiz fica aberto no notebook. Quando quiser terminar, é só sentar de novo naquela cadeira.',
+  result: (right: number, total: number, good: boolean) =>
+    good
+      ? `${right} de ${total}! Está no nível que a gente esperava. Parabéns!`
+      : `${right} de ${total}. Está no caminho certo: na reunião a gente vê o que precisa reforçar.`,
+  thanks: 'Muito obrigado, estagiário! Vou levar o resultado para a reunião de alinhamento.',
+} as const;
+
+/** Usado quando nenhum quiz da biblioteca é escolhido para a reunião de alinhamento (a aula de hardware do dia). */
+export const QUIZ_ALINHAMENTO_PADRAO: MissionGame = { title: quizAlinhamentoPadrao.title, config: quizAlinhamentoPadrao };

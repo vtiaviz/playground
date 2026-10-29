@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import type { GameResult } from '@playground/games';
 import { createOfficeGame, getOfficeScene } from './game/createGame';
-import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, PC_BOXES, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
+import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
 import { OFFICE_EVENTS, RH_LOOK } from './game/OfficeScene';
 import AlarmPanel from './mission/AlarmPanel';
 import CelularOverlay from './mission/CelularOverlay';
@@ -31,6 +31,7 @@ import {
   FORCA_PADRAO,
   FRASES_PADRAO,
   MISSAO_CACA,
+  MISSAO_ALINHAMENTO,
   MISSAO_CEO,
   MISSAO_CRUZADAS_RITA,
   MISSAO_EXERCICIO,
@@ -46,6 +47,7 @@ import {
   MISSAO_PROVA,
   MISSAO_QUADRO,
   OBJETIVOS,
+  QUIZ_ALINHAMENTO_PADRAO,
   QUIZ_PADRAO,
   QUIZ_SURPRESA_PADRAO,
   type MissionCrossword,
@@ -88,7 +90,9 @@ export interface OfficeGameProps {
   surpriseQuiz?: MissionGame | null;
   /** Palavras-cruzadas do tablet da Rita, fase 3, missão 2 (padrão: uma de exemplo com as peças do computador). */
   ritaCrossword?: MissionGame | null;
-  /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 ou 3 da fase 3 (as anteriores contam como feitas). */
+  /** Quiz da reunião de alinhamento, no notebook da Sala de Reuniões, fase 3, missão 4 (padrão: um sobre hardware). */
+  alignmentQuiz?: MissionGame | null;
+  /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 a 4 da fase 3 (as anteriores contam como feitas). */
   startAt?: 1 | 2 | 3 | 4 | 5 | 6;
   /** Começa no 1º dia (fase 1, padrão) ou direto no 2º ou 3º dia (com o XP dos dias anteriores sem erros). */
   fase?: 1 | 2 | 3;
@@ -125,7 +129,8 @@ type Phase =
   | 'peca'
   | 'askP2'
   | 'crosswordP2'
-  | 'montar';
+  | 'montar'
+  | 'quizP4';
 /** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
 type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
@@ -142,6 +147,8 @@ type Fase3M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 type Fase3M2 = 'off' | 'thirsty' | 'met' | 'waiting' | 'done';
 /** Fase 3, missão 3: Marcos chamou, montando os computadores, concluída. */
 type Fase3M3 = 'off' | 'called' | 'working' | 'done';
+/** Fase 3, missão 4: chefe chamou, respondendo (sentado), levantou sem terminar, concluída. */
+type Fase3M4 = 'off' | 'called' | 'quiz' | 'waiting' | 'done';
 /** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
 type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
 /** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
@@ -227,6 +234,7 @@ function OfficeDay({
   hangman,
   surpriseQuiz,
   ritaCrossword,
+  alignmentQuiz,
   missionTime = MISSAO_PCS.tempo,
   startAt = 1,
   fase = 1,
@@ -378,6 +386,13 @@ function OfficeDay({
   const buildsDoneRef = useRef<BuildId[]>([]);
   const [openBuild, setOpenBuild] = useState<number | null>(null);
   const [, setBuildTick] = useState(0);
+  // fase 3, missão 4
+  const [p4, setP4State] = useState<Fase3M4>('off');
+  const p4Ref = useRef<Fase3M4>('off');
+  const setP4 = (v: Fase3M4) => {
+    p4Ref.current = v;
+    setP4State(v);
+  };
   /** Mochila (uma peça de cada tipo) e os itens da lista que o Marcos já recebeu certos. */
   const [bag, setBagState] = useState<Bag>({});
   const bagRef = useRef<Bag>({});
@@ -1678,9 +1693,9 @@ function OfficeDay({
     s.rhPlace(RH_WAIT, 'down');
     s.setRhTablet(true);
     setToast(MISSAO_PECAS.dayStart);
-    if (startAt === 2 || startAt === 3) {
+    if (startAt >= 2 && startAt <= 4) {
       // para testes: as missões anteriores contam como feitas (e entram no resumo do dia)
-      const done = [MISSAO_PECAS, MISSAO_CRUZADAS_RITA].slice(0, startAt - 1);
+      const done = [MISSAO_PECAS, MISSAO_CRUZADAS_RITA, MISSAO_MONTAR_PCS].slice(0, startAt - 1);
       xpLog.current = done.map((m) => ({ mission: m.id, title: m.title, xp: m.xp }));
       setXpTo(startXp + done.reduce((sum, m) => sum + m.xp, 0));
       setP1('done');
@@ -1689,7 +1704,12 @@ function OfficeDay({
         return;
       }
       setP2('done');
-      void startF3M3(false);
+      if (startAt === 3) {
+        void startF3M3(false);
+        return;
+      }
+      setP3('done');
+      void startF3M4();
       return;
     }
     await new Promise((r) => window.setTimeout(r, 2500));
@@ -1709,6 +1729,10 @@ function OfficeDay({
     if (phaseRef.current !== 'explore') return;
     if (id === 'rita') {
       talkToRita();
+      return;
+    }
+    if (id === 'cadeira') {
+      if (p4Ref.current === 'waiting') void sitForQuiz();
       return;
     }
     if (id.startsWith('pcbox:')) {
@@ -2061,7 +2085,82 @@ function OfficeDay({
       if (!alive.current) return;
       backToExplore();
       onMissionComplete?.({ missionId: MISSAO_MONTAR_PCS.id, xp: MISSAO_MONTAR_PCS.xp, success: true });
+      void startF3M4();
     });
+  };
+
+  // ------------------------------------------------------------ fase 3, missão 4: o quiz da reunião de alinhamento
+
+  /** O chefe vai até a Sala de Reuniões e chama o ESTAGIÁRIO. */
+  const startF3M4 = async () => {
+    await new Promise((r) => window.setTimeout(r, 2000));
+    await whenFree();
+    const s = scene();
+    if (!alive.current || !s) return;
+    await s.ceoWalkTo(MEETING_BOSS, 'left', true);
+    if (!alive.current) return;
+    await whenFree();
+    if (!alive.current) return;
+    setP4('called');
+    say([ceo(MISSAO_ALINHAMENTO.call, 'ceo-feliz-b', { continueLabel: 'Estou indo!' })], () => {
+      backToExplore();
+      if (roomRef.current?.id === 'reunioes') meetBoss4();
+    });
+  };
+
+  /** Chegou na Sala de Reuniões: o chefe explica e o ESTAGIÁRIO senta para o quiz. */
+  const meetBoss4 = () => {
+    const s = scene();
+    if (!s || p4Ref.current !== 'called') return;
+    s.setFrozen(true);
+    s.setCeoWalkerAlert(false);
+    s.ceoFacePlayer();
+    const lines = MISSAO_ALINHAMENTO.briefing.map((t, i, all) => ceo(t, 'ceo-feliz-b', i === all.length - 1 ? { continueLabel: 'Vou sentar' } : {}));
+    say(lines, () => void sitForQuiz());
+  };
+
+  const sitForQuiz = async () => {
+    const s = scene();
+    if (!s) return;
+    s.setSpots([]);
+    s.setFrozen(true);
+    setPhase('dialog');
+    await s.sitAtMeeting();
+    if (!alive.current) return;
+    setP4('quiz');
+    setPhase('quizP4');
+  };
+
+  const finishQuizP4 = (result: GameResult | null) => {
+    const s = scene();
+    if (!s) return;
+    if (!result) {
+      s.leaveMeetingSeat();
+      setP4('waiting');
+      say([ceo(MISSAO_ALINHAMENTO.gaveUp, 'ceo-feliz-b')], () => {
+        scene()?.setSpots([{ id: 'cadeira', zone: MEETING_SEAT_ZONE }]);
+        backToExplore();
+      });
+      return;
+    }
+    const right = Number(result.details.correct);
+    const total = Number(result.details.total);
+    const good = total > 0 && right / total >= MISSAO_ALINHAMENTO.goodRatio;
+    addXp(MISSAO_ALINHAMENTO, MISSAO_ALINHAMENTO.xp);
+    setP4('done');
+    say(
+      [
+        ceo(MISSAO_ALINHAMENTO.result(right, total, good), good ? 'ceo-feliz-a' : 'ceo-feliz-b'),
+        ceo(MISSAO_ALINHAMENTO.thanks, 'ceo-feliz-b', { badge: `+${MISSAO_ALINHAMENTO.xp} XP · Missão concluída!`, continueLabel: 'De nada!' }),
+      ],
+      () => {
+        const sc = scene();
+        sc?.leaveMeetingSeat();
+        void sc?.ceoBackToSeat();
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_ALINHAMENTO.id, xp: MISSAO_ALINHAMENTO.xp, success: true, game: result });
+      },
+    );
   };
 
   /** Para testes: pula direto para a missão 2 a 6 (as anteriores entram no resumo como feitas, sem bronca). */
@@ -2136,6 +2235,7 @@ function OfficeDay({
       if (r?.id === 'reunioes' && f2bRef.current === 'called' && phaseRef.current === 'explore') meetDiego();
       if (r?.id === 'copa' && m5Ref.current === 'called' && phaseRef.current === 'explore') meetElisa();
       if (r?.id === 'copa' && p2Ref.current === 'thirsty' && phaseRef.current === 'explore') void ritaRuns();
+      if (r?.id === 'reunioes' && p4Ref.current === 'called' && phaseRef.current === 'explore') meetBoss4();
       if (r?.id === 'entrada' && m6Ref.current === 'armed') void lockUp();
       if (r?.id === 'entrada' && fEndRef.current === 'leaving') void leaveDay2();
     },
@@ -2145,7 +2245,17 @@ function OfficeDay({
   // ------------------------------------------------------------ tela
 
   let objective: { title: string; text: string; done: boolean };
-  if (fase === 3 && p3 !== 'off') {
+  if (fase === 3 && p4 !== 'off') {
+    const title = `Fase 3 · Missão 4: ${MISSAO_ALINHAMENTO.title}.`;
+    if (p4 === 'done')
+      objective = { title: 'Missão concluída:', text: `${MISSAO_ALINHAMENTO.title} (+${MISSAO_ALINHAMENTO.xp} XP). Explore o escritório à vontade.`, done: true };
+    else
+      objective = {
+        title,
+        text: p4 === 'called' ? OBJETIVOS.reuniao34 : p4 === 'waiting' ? OBJETIVOS.quizAlinhamento : 'Responda o quiz no notebook.',
+        done: false,
+      };
+  } else if (fase === 3 && p3 !== 'off') {
     const title = `Fase 3 · Missão 3: ${MISSAO_MONTAR_PCS.title}.`;
     if (p3 === 'done')
       objective = { title: 'Missão concluída:', text: `${MISSAO_MONTAR_PCS.title} (+${MISSAO_MONTAR_PCS.xp} XP). Explore o escritório à vontade.`, done: true };
@@ -2505,6 +2615,15 @@ function OfficeDay({
               setBuildTick((n) => n + 1);
             }}
             onClose={closePcBox}
+          />
+        )}
+        {phase === 'quizP4' && (
+          <TabletOverlay
+            heading="Quiz da reunião de alinhamento"
+            game={alignmentQuiz ?? QUIZ_ALINHAMENTO_PADRAO}
+            device="notebook"
+            doneLabel="Entregar ao chefe"
+            onClose={finishQuizP4}
           />
         )}
         {phase === 'phone' && (

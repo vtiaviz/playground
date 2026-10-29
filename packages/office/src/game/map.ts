@@ -527,3 +527,21 @@ export const PC_BOXES: { at: Point; foot: Rect; zone: Rect }[] = [
   foot: { x: at.x + 4, y: at.y + 24, w: 40, h: 14 },
   zone: { x: at.x, y: at.y + 38, w: 48, h: 30 },
 }));
+
+// ---------------------------------------------------------------- fase 3, missão 4: o quiz na Sala de Reuniões
+
+const meetingTable = FURNITURE.find((f) => f.label === 'Mesa de reunião');
+if (!meetingTable) throw new Error('Mesa de reunião faltando no mapa');
+/** A última cadeira do lado de cima da mesa de reunião (perto do quadro): onde o ESTAGIÁRIO senta para o quiz. */
+export const MEETING_SEAT = {
+  /** Em pé, atrás da cadeira (de onde ele senta). */
+  approach: { x: meetingTable.x + 198, y: meetingTable.y + 4 },
+  /** Base do desenho dele sentado: logo depois da borda de cima do tampo (parece que as pernas estão embaixo da mesa). */
+  seat: { x: meetingTable.x + 198, y: meetingTable.y + 18 },
+  /** O desenho sentado fica na frente da mesa (cobre o encosto da cadeira desenhado nela). */
+  depth: meetingTable.y + meetingTable.h + 1,
+};
+/** Área (pés) que senta de novo na cadeira, se ele levantou sem terminar o quiz. */
+export const MEETING_SEAT_ZONE: Rect = { x: MEETING_SEAT.approach.x - 26, y: MEETING_SEAT.approach.y - 14, w: 52, h: 20 };
+/** Na ponta direita da mesa de reunião: onde o chefe espera o ESTAGIÁRIO. */
+export const MEETING_BOSS = { x: meetingTable.x + meetingTable.w + 24, y: meetingTable.y + 44 };

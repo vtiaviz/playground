@@ -2498,3 +2498,54 @@ tr.is-marked .office-clip-row {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* ---------------------------------------------------------------- fase 3, missão 4: o notebook da mesa de reunião */
+.office-tablet.is-notebook {
+  display: flex;
+  flex-direction: column;
+  width: min(1000px, 100%);
+}
+.office-tablet.is-notebook .office-tablet-frame {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+.office-tablet.is-notebook .office-tablet-body {
+  padding: 18px 20px;
+  background: #3a3f49;
+  box-shadow: inset 0 4px 0 #525967, inset 0 -4px 0 #262a31;
+}
+.office-notebook-base {
+  position: relative;
+  flex: none;
+  height: 64px;
+  margin: 0 -36px;
+  background: #9aa1ab;
+  box-shadow: inset 0 4px 0 #c3c9d1, inset 0 -6px 0 #6b7380, 0 10px 0 rgba(0, 0, 0, 0.35);
+  clip-path: polygon(30px 0, calc(100% - 30px) 0, 100% 100%, 0 100%);
+  filter: drop-shadow(0 3px 0 #1c1626);
+}
+.office-notebook-keys {
+  position: absolute;
+  top: 10px;
+  left: 18%;
+  right: 18%;
+  height: 26px;
+  background:
+    repeating-linear-gradient(90deg, #2b2f37 0 14px, transparent 14px 18px),
+    repeating-linear-gradient(0deg, transparent 0 7px, #9aa1ab 7px 9px);
+  background-blend-mode: normal;
+}
+.office-notebook-pad {
+  position: absolute;
+  bottom: 9px;
+  left: 50%;
+  width: 90px;
+  height: 14px;
+  margin-left: -45px;
+  border: 2px solid #6b7380;
+  background: #8a929c;
+}
+.office-tablet-modal.is-notebook .office-tablet-body {
+  clip-path: none;
+}
