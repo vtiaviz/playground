@@ -10,6 +10,8 @@ export interface TabletOverlayProps {
   /** Jogo da biblioteca na tela: o quiz da Elisa (padrão, fase 1), a forca do Marcos (fase 2, missão 4) ou as
    * palavras-cruzadas da Rita (fase 3, missão 2). */
   gameType?: 'QUIZ' | 'FORCA' | 'CRUZADAS';
+  /** Tablet (com as mãos de quem segura) ou o notebook da mesa de reunião (fase 3, missão 4). */
+  device?: 'tablet' | 'notebook';
   /** Quem segura o tablet (cor da manga): a Elisa (vermelha) ou o ESTAGIÁRIO (verde). */
   holder?: 'elisa' | 'estagiario';
   /** Texto do botão depois de terminar o jogo. */
@@ -67,6 +69,7 @@ export default function TabletOverlay({
   heading,
   game,
   gameType = 'QUIZ',
+  device = 'tablet',
   holder = 'elisa',
   doneLabel = 'Devolver o tablet',
   onClose,
@@ -97,14 +100,18 @@ export default function TabletOverlay({
   return createPortal(
     <div
       ref={modalRef}
-      className={fullscreen ? 'office-tablet-modal is-fullscreen' : 'office-tablet-modal'}
+      className={`office-tablet-modal${fullscreen ? ' is-fullscreen' : ''}${device === 'notebook' ? ' is-notebook' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label={`${heading}: ${game.title}`}
     >
-      <div className="office-tablet">
-        <Hand side="left" holder={holder} />
-        <Hand side="right" holder={holder} />
+      <div className={device === 'notebook' ? 'office-tablet is-notebook' : 'office-tablet'}>
+        {device === 'tablet' && (
+          <>
+            <Hand side="left" holder={holder} />
+            <Hand side="right" holder={holder} />
+          </>
+        )}
         <div className="office-tablet-frame">
           <div className="office-tablet-body">
             <span className="office-tablet-camera" aria-hidden="true" />
@@ -146,6 +153,12 @@ export default function TabletOverlay({
             </div>
           </div>
         </div>
+        {device === 'notebook' && (
+          <div className="office-notebook-base" aria-hidden="true">
+            <span className="office-notebook-keys" />
+            <span className="office-notebook-pad" />
+          </div>
+        )}
       </div>
     </div>,
     document.body,

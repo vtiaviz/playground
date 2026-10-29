@@ -1,0 +1,50 @@
+{
+  "title": "Reunião de alinhamento: hardware",
+  "questions": [
+    {
+      "text": "Qual é a placa onde todas as outras peças do computador se encaixam e conversam?",
+      "options": ["Placa-mãe", "Fonte", "Placa de vídeo", "Gabinete"],
+      "correct": 0
+    },
+    {
+      "text": "Onde o processador é encaixado?",
+      "options": ["Num slot de memória", "No soquete da placa-mãe", "Na baia de discos", "No slot PCI Express"],
+      "correct": 1
+    },
+    {
+      "text": "Para que serve o cooler?",
+      "options": ["Guardar os arquivos", "Ligar o monitor", "Dar energia ao HD", "Esfriar o processador"],
+      "correct": 3
+    },
+    {
+      "text": "Qual guarda os arquivos em chips, sem nenhuma peça girando, e por isso é bem mais rápido?",
+      "options": ["HD", "SSD", "Memória RAM", "Fonte"],
+      "correct": 1
+    },
+    {
+      "text": "A memória RAM…",
+      "options": [
+        "guarda os arquivos para sempre",
+        "transforma a energia da tomada",
+        "guarda o que está sendo usado agora e apaga quando desliga",
+        "mostra a imagem no monitor"
+      ],
+      "correct": 2
+    },
+    {
+      "text": "O cabo de dados SATA liga…",
+      "options": ["o HD ou o SSD à placa-mãe", "a fonte à tomada", "o monitor ao teclado", "o cooler ao processador"],
+      "correct": 0
+    },
+    {
+      "text": "Qual dos 3 computadores montados hoje precisava de placa de vídeo e fonte de 500 W?",
+      "options": ["O do estudante", "O do escritório", "O gamer", "Nenhum deles"],
+      "correct": 2
+    },
+    {
+      "text": "Qual peça transforma a energia da tomada para as outras peças do computador?",
+      "options": ["Processador", "SSD", "Cooler", "Fonte"],
+      "correct": 3
+    }
+  ]
+}

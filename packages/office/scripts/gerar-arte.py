@@ -628,6 +628,17 @@ def npc_seated(look):
     return c.outline()
 
 
+def intern_seated():
+    """ESTAGIÁRIO sentado de frente numa cadeira da Sala de Reuniões (encosto verde-água atrás): 20 x 24."""
+    c = Canvas(20, 24)
+    c.rect(2, 7, 16, 14, TEAL)
+    c.rect(3, 8, 14, 1, TEAL_L)
+    c.rect(2, 20, 16, 1, TEAL_D)
+    draw_body_front(c, 5, 16, ESTAGIARIO, -1, 1)
+    draw_head(c, 5, 5, ESTAGIARIO, 'down')
+    return c.outline()
+
+
 def npc_seated_typing(look):
     c = Canvas(20, 24)
     c.rect(2, 7, 16, 14, '#2b6f7a')
@@ -2545,6 +2556,7 @@ def build():
     add('luz-tela', f_screen_light(), None, 'fx')
     add('led', f_led(), None, 'fx')
     add('viva-a', cheer('a'), None, 'fx')
+    add('estagiario-sentado', intern_seated(), None, 'fx')
     add('viva-b', cheer('b'), None, 'fx')
     add('painel-alarme', f_alarm_panel(), (3, 22, 8, 4))
     add('placa-arduino', f_board_floor('arduino'), None, 'fx')

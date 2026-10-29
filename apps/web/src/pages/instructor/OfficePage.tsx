@@ -41,6 +41,7 @@ export default function OfficePage() {
   const [hangmanId, setHangmanId] = useState<string>('');
   const [surpriseId, setSurpriseId] = useState<string>('');
   const [ritaId, setRitaId] = useState<string>('');
+  const [alignmentId, setAlignmentId] = useState<string>('');
 
   useEffect(() => {
     api<{ games: SavedGame[] }>('/games')
@@ -54,6 +55,8 @@ export default function OfficePage() {
         // exercício surpresa: de preferência um quiz diferente do da Elisa
         const quizIds = r.games.filter((g) => g.gameType === 'QUIZ').map((g) => g.id);
         setSurpriseId(quizIds[1] ?? quizIds[0] ?? '');
+        // quiz da reunião de alinhamento: de preferência um terceiro quiz
+        setAlignmentId(quizIds[2] ?? quizIds[0] ?? '');
         // cruzadas da Rita: de preferência uma diferente da do CEO
         const crosswordIds = r.games.filter((g) => g.gameType === 'CRUZADAS').map((g) => g.id);
         setRitaId(crosswordIds[1] ?? crosswordIds[0] ?? '');
@@ -76,6 +79,7 @@ export default function OfficePage() {
   const hangman = hangmen?.find((g) => g.id === hangmanId) ?? null;
   const surprise = quizzes?.find((g) => g.id === surpriseId) ?? null;
   const ritaCrossword = crosswords?.find((g) => g.id === ritaId) ?? null;
+  const alignment = quizzes?.find((g) => g.id === alignmentId) ?? null;
 
   return (
     <section className="panel">
@@ -91,8 +95,8 @@ export default function OfficePage() {
             desenvolvimento (Arduino e Raspberry Pi) escondidas nos armários com lupa; a forca que ficou aberta no tablet
             quando o Marcos cochilou; e o exercício surpresa do curso, que chega pelo WhatsApp no celular do estagiário.
             No fim, o chefe dispensa o estagiário e aparece o resumo do 2º dia. No 3º dia (fase 3), as peças de hardware da
-            lista do Marcos, as palavras-cruzadas do tablet da Rita, na Copa, e a montagem de 3 computadores (estudante, gamer
-            e escritório) na Sala de TI.
+            lista do Marcos, as palavras-cruzadas do tablet da Rita, na Copa, a montagem de 3 computadores (estudante, gamer
+            e escritório) na Sala de TI e o quiz da reunião de alinhamento, no notebook da Sala de Reuniões.
           </p>
         </div>
         <GamePicker
@@ -144,6 +148,13 @@ export default function OfficePage() {
           onChange={setRitaId}
           emptyLabel="Jogo de exemplo (sem cruzadas salvas)"
         />
+        <GamePicker
+          label="Reunião de alinhamento, 3º dia (Quiz)"
+          games={quizzes}
+          value={alignmentId}
+          onChange={setAlignmentId}
+          emptyLabel="Jogo de exemplo (sem quiz salvo)"
+        />
       </div>
       {error && (
         <p className="hint" role="alert">
@@ -156,7 +167,7 @@ export default function OfficePage() {
         <Suspense fallback={<p className="hint">Carregando o escritório…</p>}>
           {/* key: trocar um jogo reinicia as missões */}
           <OfficeGame
-            key={`${crosswordId || 'exemplo'}:${phrasesId || 'exemplo'}:${quizId || 'exemplo'}:${wordSearchId || 'exemplo'}:${hangmanId || 'exemplo'}:${surpriseId || 'exemplo'}:${ritaId || 'exemplo'}`}
+            key={`${crosswordId || 'exemplo'}:${phrasesId || 'exemplo'}:${quizId || 'exemplo'}:${wordSearchId || 'exemplo'}:${hangmanId || 'exemplo'}:${surpriseId || 'exemplo'}:${ritaId || 'exemplo'}:${alignmentId || 'exemplo'}`}
             crossword={asMissionGame(crossword)}
             phrases={asMissionGame(phrase)}
             quiz={asMissionGame(quiz)}
@@ -164,6 +175,7 @@ export default function OfficePage() {
             hangman={asMissionGame(hangman)}
             surpriseQuiz={asMissionGame(surprise)}
             ritaCrossword={asMissionGame(ritaCrossword)}
+            alignmentQuiz={asMissionGame(alignment)}
           />
         </Suspense>
       )}

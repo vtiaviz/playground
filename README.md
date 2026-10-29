@@ -528,6 +528,7 @@ React abre a tarefa, e a nota vai para a API como nos outros jogos.
       tests/pecas.test.ts        lista com 8 peças e as parecidas (desenho próprio), adesivos, onde as peças caem e a conferência
       tests/missao-f3m2.test.ts  cruzadas de exemplo da Rita, a corrida do RH até a porta da Copa, bebedouro e o canto da Rita
       tests/montar-pc.test.ts    pedidos dos 3 computadores, ordem de encaixe, cabos de energia e SATA, ligar e as caixas na TI
+      tests/missao-f3m4.test.ts  quiz de exemplo da reunião de alinhamento, caminho do chefe e a cadeira da mesa de reunião
 
 - **Arte própria.** Tudo é pixel art desenhada pelo `scripts/gerar-arte.py` (tiles de 32 px, 1 pixel de arte = 2 px).
   As imagens de referência (planta do escritório e folhas de personagens) serviram só de inspiração para a disposição
@@ -926,6 +927,26 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
 - **Para testar:** `?fase=3&missao=3` começa direto nesta missão (as duas anteriores contam como feitas). No
   componente: `<OfficeGame fase={3} startAt={3} />`.
 
+### Missão 4: o quiz da reunião de alinhamento (+100 XP)
+
+1. Depois dos 3 computadores, o **chefe** (CEO) levanta da Diretoria, vai até a ponta da mesa da **Sala de Reuniões**
+   (com o **!**) e chama o ESTAGIÁRIO.
+2. Lá, ele explica que o quiz vai ser passado na **reunião de alinhamento** de mais tarde e que precisam saber se o
+   estagiário está com o nível esperado.
+3. O ESTAGIÁRIO **senta** na cadeira da mesa de reunião (a mais perto do quadro) e abre o modal no formato de
+   **notebook** com o **quiz da biblioteca**.
+4. Ao terminar → **Entregar ao chefe** → o chefe comenta o resultado (*"7 de 8! Está no nível que a gente
+   esperava"* a partir de 70%; abaixo disso, *"está no caminho certo"*), agradece e dá **+100 XP** de qualquer jeito.
+   Depois volta para a Diretoria.
+5. **✕ Desistir** no notebook: o ESTAGIÁRIO levanta e o chefe diz que o quiz fica aberto; é só voltar para a cadeira
+   para sentar e responder de novo.
+
+- **Qual jogo:** na página do instrutor, **"Reunião de alinhamento, 3º dia (Quiz)"** (de preferência um terceiro quiz,
+  diferente da prova da Elisa e do exercício surpresa). Sem nenhum salvo, usa um de exemplo sobre a aula de hardware:
+  `packages/office/src/game/quiz-alinhamento-padrao.json`.
+- **Para testar:** `?fase=3&missao=4` começa direto nesta missão. No componente:
+  `<OfficeGame fase={3} startAt={4} alignmentQuiz={...} />`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -1006,6 +1027,10 @@ No resumo do fim do 1º dia, **Começar o 2º dia ▶** abre a fase 2, levando o
     memória, HD e fonte → **Ligar** (diz os cabos que faltam) → energia SATA na entrada de dados (não encaixa) → ligar
     os 3 cabos → **Ligar** → tela de inicialização → **Pronto ✓** (🖥️ 1|3) → gamer (com a energia da placa de vídeo)
     → escritório (HD e SSD) → o Marcos vem, **+100 XP** e comemoração.
+28. Fase 3, missão 4 (`?fase=3&missao=4`, ou seguindo depois dos computadores): o chefe vai até a Sala de Reuniões e
+    chama → entrar na sala → duas falas → o ESTAGIÁRIO senta → notebook com o quiz → **✕ Desistir** → ele levanta e o
+    chefe diz que o quiz fica aberto → voltar para a cadeira → senta de novo → responder tudo → **Entregar ao chefe** →
+    o chefe comenta os acertos, **+100 XP**, e volta para a Diretoria.
 
 ## Correções incluídas desde a Fase 1
 
