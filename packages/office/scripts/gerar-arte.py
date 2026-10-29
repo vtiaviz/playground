@@ -932,6 +932,39 @@ def cheer(frame, wet=False):
     return c.outline()
 
 
+def wipe(frame):
+    """ESTAGIÁRIO cansado, de frente, passando a mão na testa para enxugar o suor (a/b = a mão de um lado e do
+    outro da testa, com as gotas pulando): 18 x 34, pés na linha 31."""
+    c = Canvas(18, 34)
+    look = ESTAGIARIO
+    oy = 6
+    shirt, shirt_l, shirt_d = look['shirt']
+    draw_legs_front(c, 4, oy + 19)
+    c.rect(4, oy + 11, 10, 8, shirt)
+    c.rect(5, oy + 11, 8, 1, shirt_l)
+    c.p(7, oy + 11, shirt_d)
+    c.p(10, oy + 11, shirt_d)
+    c.rect(8, oy + 11, 2, 2, SKIN)
+    c.vline(9, oy + 13, 5, shirt_d)
+    c.hline(4, oy + 18, 10, PANTS_D)
+    draw_head(c, 4, oy, look, 'down')
+    c.rect(8, oy + 8, 2, 2, OUT)  # boca aberta, cansado
+    c.p(7, oy + 6, SKIN)  # olhos meio fechados
+    c.p(10, oy + 6, SKIN)
+    c.p(5, oy + 8, '#f0a58a')
+    c.p(12, oy + 8, '#f0a58a')
+    c.rect(2, oy + 11, 2, 7, shirt_l)  # braço esquerdo caído
+    c.rect(2, oy + 18, 2, 2, SKIN)
+    hx = 5 if frame == 'a' else 8  # a mão passa de um lado para o outro da testa
+    c.rect(14, oy + 3, 2, 9, shirt_l)  # braço direito levantado, a mão na testa
+    c.rect(hx + 2, oy + 3, 12 - hx, 1, shirt_l)
+    c.rect(hx, oy + 3, 3, 2, SKIN)
+    for x, y in (((2, oy + 1), (15, oy + 1)) if frame == 'a' else ((1, oy + 3), (16, oy))):
+        c.p(x, y, '#9fd8ff')
+        c.p(x, y + 1, '#5bb4ef')
+    return c.outline()
+
+
 # ---------------------------------------------------------------- móveis
 
 WOOD, WOOD_L, WOOD_D, WOOD_DD = '#a86a3c', '#c48650', '#7c4a27', '#5a341b'
@@ -2991,6 +3024,19 @@ def f_quiz_sheet():
     return c.outline()
 
 
+def f_wordsearch_sheet():
+    """A terceira folha, com o caça-palavras do treinamento: uma grade de letrinhas com uma palavra marcada."""
+    c = Canvas(13, 9)
+    c.rect(1, 1, 11, 7, '#fbfaf5')
+    for y in range(2, 8, 2):
+        for x in range(2, 11, 2):
+            c.p(x, y, '#5f6775')
+    c.hline(2, 4, 7, '#e5c34a')  # palavra achada
+    for x in range(2, 9, 2):
+        c.p(x, 4, '#5f6775')
+    return c.outline()
+
+
 def f_copies():
     """O maço das 10 cópias impressas, em cima da impressora."""
     c = Canvas(14, 8)
@@ -3089,6 +3135,8 @@ def build():
     add('viva-b', cheer('b'), None, 'fx')
     add('viva-molhado-a', cheer('a', wet=True), None, 'fx')
     add('viva-molhado-b', cheer('b', wet=True), None, 'fx')
+    add('enxugar-a', wipe('a'), None, 'fx')
+    add('enxugar-b', wipe('b'), None, 'fx')
     add('mictorio', f_urinal(), (1, 17, 10, 4))
     add('palavras-parede', f_wall_words(), None, 'wall')
     add('placa-banheiro', f_wc_sign(), None, 'wall')
@@ -3097,6 +3145,7 @@ def build():
     add('copias', f_copies(), None, 'fx')
     add('papel-frases', f_paper_sheet(), None, 'fx')
     add('papel-quiz', f_quiz_sheet(), None, 'fx')
+    add('papel-caca', f_wordsearch_sheet(), None, 'fx')
     add('painel-alarme', f_alarm_panel(), (3, 22, 8, 4))
     add('placa-arduino', f_board_floor('arduino'), None, 'fx')
     add('placa-raspberry', f_board_floor('raspberry'), None, 'fx')

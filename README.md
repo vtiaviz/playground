@@ -1062,6 +1062,24 @@ direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 
 - **Para testar:** `?fase=4&missao=4` começa com a segunda folha já na mesa do Marcos. No componente:
   `<OfficeGame fase={4} startAt={4} trainingQuiz={...} />`.
 
+### Missão 5: o caça-palavras do treinamento de TI (+100 XP) e o fim do 4º dia
+
+1. Depois de comemorar o quiz, o ESTAGIÁRIO, cansado, **passa a mão na testa para enxugar o suor** (gotinhas
+   pulando)… e leva **outro susto**: uma **terceira folha** sai de baixo da segunda e cai em cima da primeira.
+   *"MEU DEUS, AINDA TEM MAIS UMA!? Agora é um caça-palavras…"*
+2. **Ver a folha** abre a folha de papel pautado com o **Caça-palavras** da biblioteca. Achou todas → **Pronto ▶** →
+   **+100 XP** e comemora. **✕ Fechar** antes deixa a folha na mesa (com o **!**).
+3. **Fim do dia:** a **Rita** sai do RH, para no meio da Área de Trabalho avisando todo mundo (balão de conversa) e
+   vem até o ESTAGIÁRIO: o **chefe dispensou todo mundo** mais cedo. Os colegas, a recepcionista, a Rita e o chefe
+   vão embora (a cadeira do Marcos continua vazia: ele faltou).
+4. Saindo pela porta principal, o ESTAGIÁRIO **comemora na calçada** e aparece o **resumo do 4º dia** (as 5 missões).
+
+- **Qual jogo:** na página do instrutor, **"Caça-palavras do treinamento de TI, 4º dia (Caça-palavras)"** (de
+  preferência um terceiro caça-palavras). Sem nenhum salvo, usa um de exemplo com os periféricos:
+  `packages/office/src/game/caca-palavras-treinamento-padrao.json`.
+- **Para testar:** `?fase=4&missao=5` começa com a terceira folha já na mesa do Marcos. No componente:
+  `<OfficeGame fase={4} startAt={5} trainingWordSearch={...} />`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -1168,6 +1186,10 @@ direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 
 33. Fase 4, missão 4 (`?fase=4&missao=4`, ou seguindo depois das frases): susto (pulinho e **!**) e a segunda folha
     sai de baixo da primeira → **Ver a folha** → quiz na folha de papel → **✕ Fechar** → **!** na segunda folha →
     voltar → responder tudo → **Pronto ▶** → **+100 XP** e o ESTAGIÁRIO comemora.
+34. Fase 4, missão 5 (`?fase=4&missao=5`, ou seguindo depois do quiz): enxuga o suor → susto e a terceira folha →
+    *"MEU DEUS, AINDA TEM MAIS UMA!?"* → **Ver a folha** → caça-palavras → **✕ Fechar** → voltar → achar todas →
+    **Pronto ▶** → **+100 XP** → a Rita passa pela Área de Trabalho e avisa que o chefe dispensou todo mundo → todos
+    vão embora (ninguém sai da cadeira vazia do Marcos) → sair pela porta principal → comemora → resumo do 4º dia.
 
 ## Correções incluídas desde a Fase 1
 

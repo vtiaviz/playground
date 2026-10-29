@@ -3,6 +3,7 @@ import cruzadasPadrao from '../game/cruzadas-padrao.json';
 import frasesPadrao from '../game/frases-padrao.json';
 import frasesTreinamentoPadrao from '../game/frases-treinamento-padrao.json';
 import quizTreinamentoPadrao from '../game/quiz-treinamento-padrao.json';
+import cacaPalavrasTreinamentoPadrao from '../game/caca-palavras-treinamento-padrao.json';
 import quizPadrao from '../game/quiz-padrao.json';
 import cacaPalavrasPadrao from '../game/caca-palavras-padrao.json';
 import cacaPalavrasBanheiroPadrao from '../game/caca-palavras-banheiro-padrao.json';
@@ -91,6 +92,9 @@ export const OBJETIVOS = {
   levarCopias: 'Leve as 10 cópias ao chefe, na Sala de Reuniões',
   treinamento: 'Vá até a Sala de TI e complete as frases do treinamento no papel em cima da mesa do Marcos',
   quizTreinamento: 'Responda o quiz da segunda folha, em cima da mesa do Marcos, na Sala de TI',
+  cacaTreinamento: 'Resolva o caça-palavras da terceira folha, em cima da mesa do Marcos, na Sala de TI',
+  rita4: 'A Rita está vindo dar um recado…',
+  embora4: 'O chefe dispensou todo mundo! Saia da empresa pela porta principal',
 } as const;
 
 /** Segunda missão: ligar os computadores da Área de Trabalho enquanto a equipe está em reunião. */
@@ -564,3 +568,32 @@ export const MISSAO_QUIZ_TREINAMENTO = {
 
 /** Usado quando nenhum quiz da biblioteca é passado para o treinamento de TI (fase 4, missão 4). */
 export const QUIZ_TREINAMENTO_PADRAO: MissionGame = { title: quizTreinamentoPadrao.title, config: quizTreinamentoPadrao };
+
+/** Fase 4, missão 5: e ainda tinha uma terceira folha, com um caça-palavras. */
+export const MISSAO_CACA_TREINAMENTO = {
+  id: 'caca-palavras-treinamento-ti',
+  title: 'O caça-palavras do treinamento de TI',
+  xp: 100,
+  wow: 'MEU DEUS, AINDA TEM MAIS UMA!? Agora é um caça-palavras…',
+  kicker: 'Treinamento de TI · caça-palavras do Marcos',
+  heading: 'Resolva o caça-palavras do treinamento de TI',
+  appeared: 'Apareceu a terceira folha na mesa do Marcos, na Sala de TI: um caça-palavras!',
+  notYet: 'A terceira folha continua em cima da mesa do Marcos: é só voltar lá para terminar.',
+  success: 'Achei todas! Frases, quiz e caça-palavras: o treinamento de TI está pronto. Agora acabou… né?',
+} as const;
+
+/** Usado quando nenhum caça-palavras da biblioteca é passado para o treinamento de TI (fase 4, missão 5). */
+export const CACA_PALAVRAS_TREINAMENTO_PADRAO: MissionGame = {
+  title: cacaPalavrasTreinamentoPadrao.title,
+  config: cacaPalavrasTreinamentoPadrao,
+};
+
+/** Fim do 4º dia: a Rita avisa que o chefe dispensou todo mundo. */
+export const FIM_DIA4 = {
+  rita: [
+    'Estagiário! O chefe mandou avisar: depois de um dia desses, ele dispensou todo mundo mais cedo!',
+    'E ele disse que, sem você, a reunião não teria acontecido. Pode ir para casa descansar, viu?',
+  ],
+  dismissed: '🏃 O chefe dispensou todo mundo! O pessoal está indo embora…',
+  victory: 'UHUUUL! Quarto dia de estágio concluído! Que dia!',
+} as const;

@@ -617,3 +617,7 @@ export const TRAINING_PAPER: Point = { x: itDesk.x + 12, y: itDesk.y + 26 };
 export const TRAINING_ZONE: Rect = { x: itDesk.foot!.x + 6, y: itDesk.foot!.y + itDesk.foot!.h, w: itDesk.foot!.w - 12, h: 34 };
 /** A segunda folha (o quiz): sai deslizando de baixo da primeira e para do outro lado do teclado (fase 4, missão 4). */
 export const QUIZ_PAPER: Point = { x: TRAINING_PAPER.x + 58, y: TRAINING_PAPER.y - 2 };
+/** A terceira folha (o caça-palavras): sai de baixo da segunda e cai em cima da primeira (fase 4, missão 5). */
+export const WORDSEARCH_PAPER: Point = { x: TRAINING_PAPER.x + 4, y: TRAINING_PAPER.y - 6 };
+/** No meio da Área de Trabalho, entre as duas fileiras de mesas: onde a Rita avisa que o chefe dispensou todo mundo. */
+export const RITA_ANNOUNCE: Point = { x: t(24.5), y: t(16.4) };

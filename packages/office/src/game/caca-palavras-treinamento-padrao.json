@@ -1,0 +1,7 @@
+{
+  "title": "Os periféricos do treinamento",
+  "words": ["PROJETOR", "WEBCAM", "IMPRESSORA", "SCANNER", "TECLADO", "MOUSE", "MONITOR", "MICROFONE", "HDMI", "VGA", "USB", "LAN"],
+  "seed": 2028,
+  "size": 13,
+  "directions": "simple"
+}

@@ -7,8 +7,8 @@ import { useFullscreen } from './useFullscreen';
 export interface PapelOverlayProps {
   heading: string;
   game: MissionGame;
-  /** Jogo da biblioteca escrito na folha: as frases (missão 3) ou o quiz (missão 4). */
-  gameType?: 'COMPLETE_FRASES' | 'QUIZ';
+  /** Jogo da biblioteca escrito na folha: as frases (missão 3), o quiz (missão 4) ou o caça-palavras (missão 5). */
+  gameType?: 'COMPLETE_FRASES' | 'QUIZ' | 'CACA_PALAVRAS';
   /** Linha pequena em cima do título. */
   kicker?: string;
   /** Saiu depois de terminar o jogo (`result`) ou antes (`null`, continua depois). */
@@ -17,7 +17,8 @@ export interface PapelOverlayProps {
 
 /**
  * Modal em forma de folha de papel pautado (com clipe, margem vermelha e mancha de café), com um jogo da biblioteca
- * escrito na folha: o "Complete as Frases" (fase 4, missão 3) ou o quiz (missão 4) do treinamento de TI.
+ * escrito na folha: o "Complete as Frases" (fase 4, missão 3), o quiz (missão 4) ou o caça-palavras (missão 5) do
+ * treinamento de TI.
  */
 export default function PapelOverlay({
   heading,

@@ -49,6 +49,7 @@ import {
   PRINTER,
   TRAINING_PAPER,
   QUIZ_PAPER,
+  WORDSEARCH_PAPER,
   besidePlayer,
   landingSpots,
   PICKUP_RADIUS,
@@ -192,6 +193,10 @@ export class OfficeScene extends Phaser.Scene {
   private trainingPaper: Phaser.GameObjects.Image | null = null;
   /** Fase 4, missão 4: a segunda folha, com o quiz. */
   private quizPaper: Phaser.GameObjects.Image | null = null;
+  /** Fase 4, missão 5: a terceira folha, com o caça-palavras. */
+  private wordSearchPaper: Phaser.GameObjects.Image | null = null;
+  /** Fase 4: o Marcos faltou (a cadeira dele fica vazia e ninguém sai dela no fim do dia). */
+  private itAbsent = false;
 
   constructor() {
     super('office');
@@ -931,6 +936,7 @@ export class OfficeScene extends Phaser.Scene {
           await this.wait(delay);
           // o Marcos pode já estar em pé (fase 3: comemorou a montagem dos computadores e ficou na Sala de TI)
           const standing = img === this.itGuy ? this.itWalker : null;
+          if (img === this.itGuy && this.itAbsent && !standing) return; // faltou hoje: não tem ninguém para sair
           if (standing) {
             this.setItAlert(false);
             this.itWalker = null;
@@ -1735,6 +1741,7 @@ export class OfficeScene extends Phaser.Scene {
 
   /** O Marcos faltou (está doente): a cadeira da Sala de TI fica vazia. */
   itGuyAbsent() {
+    this.itAbsent = true;
     this.itGuy.setFrame('cadeira-vazia');
   }
 
@@ -1825,6 +1832,78 @@ export class OfficeScene extends Phaser.Scene {
       ease: 'Back.easeOut',
       onComplete: () => img.setDepth(TRAINING_PAPER.y + 41),
     });
+  }
+
+  /** A terceira folha, com o caça-palavras: sai de baixo da segunda (`slide`) e cai em cima da primeira. */
+  setWordSearchPaper(on: boolean, slide = false) {
+    this.wordSearchPaper?.destroy();
+    this.wordSearchPaper = null;
+    if (!on) return;
+    const at = WORDSEARCH_PAPER;
+    const img = this.add.image(at.x, at.y, 'moveis', 'papel-caca').setOrigin(0).setDepth(TRAINING_PAPER.y + 42);
+    this.wordSearchPaper = img;
+    if (!slide) return;
+    img.setPosition(QUIZ_PAPER.x, QUIZ_PAPER.y).setDepth(TRAINING_PAPER.y + 40);
+    this.tweens.add({
+      targets: img,
+      x: at.x,
+      y: at.y,
+      duration: 650,
+      ease: 'Back.easeOut',
+      onComplete: () => img.setDepth(TRAINING_PAPER.y + 42),
+    });
+  }
+
+  /** O ESTAGIÁRIO, cansado, passa a mão na testa para enxugar o suor (gotinhas pulando). */
+  async wipeSweat() {
+    const p = { x: this.player.x, y: this.player.y };
+    this.player.setVisible(false);
+    this.shadow.setVisible(false);
+    const img = this.add.image(p.x, p.y + 2, 'moveis', 'enxugar-a').setOrigin(0.5, 62 / 68).setDepth(100000);
+    const flip = this.time.addEvent({
+      delay: 300,
+      loop: true,
+      callback: () => img.setFrame(img.frame.name === 'enxugar-a' ? 'enxugar-b' : 'enxugar-a'),
+    });
+    for (let k = 0; k < 4; k++) {
+      const side = k % 2 ? 1 : -1;
+      const drop = this.add.circle(p.x + side * 12, p.y - FEET_Y + 4, 2.5, 0x6cc6ff).setDepth(100001);
+      this.tweens.add({
+        targets: drop,
+        x: drop.x + side * 14,
+        y: drop.y + 18,
+        alpha: 0,
+        duration: 600,
+        delay: k * 380,
+        ease: 'Quad.easeIn',
+        onComplete: () => drop.destroy(),
+      });
+    }
+    await this.wait(1800);
+    flip.remove();
+    img.destroy();
+    this.player.setVisible(true);
+    this.shadow.setVisible(true);
+    this.facing = 'up';
+  }
+
+  /** A Rita para no meio da Área de Trabalho e avisa a todos (balão de conversa), depois vem até o ESTAGIÁRIO. */
+  async ritaAnnounces(stop: Point) {
+    this.setRhTablet(false);
+    await this.walkSprite(this.rh, RH_LOOK, stop);
+    if (!this.rh.active) return;
+    this.rhFace('down');
+    const bubble = this.add.image(this.rh.x + 12, this.rh.y - FEET_Y - 10, 'moveis', 'conversa').setDepth(100000);
+    this.tweens.add({ targets: bubble, y: bubble.y - 4, duration: 300, yoyo: true, repeat: 3 });
+    await this.wait(1600);
+    bubble.destroy();
+    const p = { x: this.player.x, y: this.player.y };
+    await this.walkSprite(this.rh, RH_LOOK, besidePlayer(p, { x: this.rh.x, y: this.rh.y }, 34));
+    if (!this.rh.active) return;
+    const dx = p.x - this.rh.x;
+    const dy = p.y - this.rh.y;
+    this.rhFace(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down');
+    this.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'right' : 'left') : dy < 0 ? 'down' : 'up';
   }
 
   /** O chefe (em pé) vem até o lado do ESTAGIÁRIO, e os dois ficam de frente. */
