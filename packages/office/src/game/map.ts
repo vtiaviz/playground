@@ -608,3 +608,10 @@ export const PRINTER: { zone: Rect; copies: Point; top: Point } = {
   copies: { x: copier.x + 6, y: copier.y + 7 },
   top: { x: copier.x + copier.w / 2, y: copier.y },
 };
+
+// ------------------------------------------------------------ fase 4, missão 3: o papel do treinamento na mesa do Marcos
+
+/** A folha das frases do treinamento, em cima da mesa do Marcos (canto de cima à esquerda do desenho). */
+export const TRAINING_PAPER: Point = { x: itDesk.x + 12, y: itDesk.y + 26 };
+/** Na frente da mesa do Marcos (pés do ESTAGIÁRIO): abre o papel. */
+export const TRAINING_ZONE: Rect = { x: itDesk.foot!.x + 6, y: itDesk.foot!.y + itDesk.foot!.h, w: itDesk.foot!.w - 12, h: 34 };

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import type { GameResult } from '@playground/games';
 import { createOfficeGame, getOfficeScene } from './game/createGame';
-import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, PROJECTOR_BOX, PRINT_DESK, PRINTER, URINAL_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
+import { ALARM_ZONE, BOARD, BOARD_CROWD, BOARD_ZONE, COPA_ESCAPE, COPA_RITA_WAIT, MEETING_BOSS, MEETING_SEAT_ZONE, PC_BOXES, PROJECTOR_BOX, PRINT_DESK, PRINTER, TRAINING_PAPER, TRAINING_ZONE, URINAL_ZONE, CORRIDOR_NAME, deskSpot, deviceSpot, IT_EXIT, IT_SEAT, IT_TABLET_FLOOR, IT_TABLET_ZONE, IT_ZONE, searchSpot, RH_HOME, RH_STATIONS, RH_WAIT, ROOMS, SPAWN, WORKSTATIONS, type Room } from './game/map';
 import { OFFICE_EVENTS, RH_LOOK } from './game/OfficeScene';
 import AlarmPanel from './mission/AlarmPanel';
 import CelularOverlay from './mission/CelularOverlay';
@@ -42,6 +42,8 @@ import {
   MISSAO_FIM,
   MISSAO_FORCA,
   MISSAO_IMPRESSAO,
+  MISSAO_TREINAMENTO,
+  FRASES_TREINAMENTO_PADRAO,
   MISSAO_LEVANTAMENTO,
   MISSAO_MONTAGEM,
   MISSAO_MONTAR_PCS,
@@ -63,6 +65,7 @@ import SonhoOverlay from './mission/SonhoOverlay';
 import ProjetorModal from './mission/ProjetorModal';
 import { newSetupState, type SetupState } from './mission/projetor';
 import ImpressoraModal from './mission/ImpressoraModal';
+import PapelOverlay from './mission/PapelOverlay';
 import { newPrinterState, type PrinterState } from './mission/impressao';
 import PcImpressaoModal from './mission/sistemas/PcImpressaoModal';
 import { allPlaced, checkKit, KITS, newKitState, type KitState } from './mission/montagem';
@@ -105,6 +108,8 @@ export interface OfficeGameProps {
   alignmentQuiz?: MissionGame | null;
   /** Caça-palavras sonhado em frente ao mictório, fase 3, missão 5 (padrão: um de exemplo com as peças do computador). */
   bathroomWordSearch?: MissionGame | null;
+  /** Fase 4, missão 3: as frases do treinamento de TI no papel da mesa do Marcos (`null` = jogo de exemplo). */
+  trainingPhrases?: MissionGame | null;
   /** Para testes: começa direto na missão 2 a 6 da fase 1, na 2 a 5 da fase 2 (6 = fim do 2º dia) ou na 2 a 5 da fase 3 (as anteriores contam como feitas). */
   startAt?: 1 | 2 | 3 | 4 | 5 | 6;
   /** Começa no 1º dia (fase 1, padrão) ou direto no 2º, 3º ou 4º dia (com o XP dos dias anteriores sem erros). */
@@ -147,7 +152,8 @@ type Phase =
   | 'dreamP5'
   | 'projetor'
   | 'pcImpressao'
-  | 'impressora';
+  | 'impressora'
+  | 'paperQ3';
 /** Fase 2, missão 1: chefe chamou, procurando os computadores, Marcos conferindo, concluída. */
 type Fase2M1 = 'off' | 'called' | 'working' | 'checking' | 'done';
 /** Fase 2, missão 2: colegas conversando no quadro, Diego chamou, aceitou ajudar (ir ao quadro), concluída. */
@@ -175,6 +181,8 @@ type Fase3M5 = 'off' | 'running' | 'wet' | 'urinal' | 'exit' | 'leaving' | 'done
 type Fase4M1 = 'off' | 'called' | 'working' | 'done';
 /** Fase 4, missão 2: imprimindo (PC e impressora), as cópias saíram (pegar), levando ao chefe, concluída. */
 type Fase4M2 = 'off' | 'working' | 'printed' | 'carrying' | 'done';
+/** Fase 4, missão 3: completando as frases do treinamento (o papel na mesa do Marcos), concluída. */
+type Fase4M3 = 'off' | 'working' | 'done';
 /** Fim do 2º dia: chefe chamou, dispensado (indo embora), saiu e viu o resumo. */
 type Fase2Fim = 'off' | 'called' | 'leaving' | 'done';
 /** Missão 6: equipe indo embora, chefe chamou, desligando, alarme ativado, conferindo, concluída. */
@@ -265,6 +273,7 @@ function OfficeDay({
   ritaCrossword,
   alignmentQuiz,
   bathroomWordSearch,
+  trainingPhrases,
   missionTime = MISSAO_PCS.tempo,
   startAt = 1,
   fase = 1,
@@ -453,6 +462,13 @@ function OfficeDay({
   const setPrinter = (p: PrinterState) => {
     printerRef.current = p;
     setPrinterState(p);
+  };
+  // fase 4, missão 3
+  const [q3, setQ3State] = useState<Fase4M3>('off');
+  const q3Ref = useRef<Fase4M3>('off');
+  const setQ3 = (v: Fase4M3) => {
+    q3Ref.current = v;
+    setQ3State(v);
   };
   /** Já viu a impressora off-line no PC (o "!" passa para a impressora). */
   const [pcSeen, setPcSeenState] = useState(false);
@@ -2379,15 +2395,20 @@ function OfficeDay({
     s.rhPlace(RH_WAIT, 'down');
     s.itGuyAbsent();
     setToast(MISSAO_PROJETOR.dayStart);
-    if (startAt === 2) {
-      // para testes: o projetor conta como feito (e entra no resumo do dia); o chefe vai para a Sala de Reuniões
-      xpLog.current = [{ mission: MISSAO_PROJETOR.id, title: MISSAO_PROJETOR.title, xp: MISSAO_PROJETOR.xp }];
-      setXpTo(startXp + MISSAO_PROJETOR.xp);
+    if (startAt === 2 || startAt === 3) {
+      // para testes: as missões anteriores contam como feitas (e entram no resumo do dia); o chefe vai para a Sala de
+      // Reuniões
+      const done = [MISSAO_PROJETOR, MISSAO_IMPRESSAO].slice(0, startAt - 1);
+      xpLog.current = done.map((m) => ({ mission: m.id, title: m.title, xp: m.xp }));
+      setXpTo(startXp + done.reduce((sum, m) => sum + m.xp, 0));
       setQ1('done');
+      if (startAt === 3) setQ2('done');
       s.setCeoMood('tranquilo');
       await s.ceoWalkTo(MEETING_BOSS, 'left');
       await whenFree();
-      if (alive.current) startQ2();
+      if (!alive.current) return;
+      if (startAt === 2) startQ2();
+      else startQ3();
       return;
     }
     await new Promise((r) => window.setTimeout(r, 4800));
@@ -2595,8 +2616,63 @@ function OfficeDay({
         setPhase('dialog');
         await Promise.all([sc.cheer(), sc.ceoCelebrates()]);
         if (!alive.current) return;
-        backToExplore();
         onMissionComplete?.({ missionId: MISSAO_IMPRESSAO.id, xp: MISSAO_IMPRESSAO.xp, success: true });
+        startQ3();
+      },
+    );
+  };
+
+  // ------------------------------------------------------------ fase 4, missão 3: as frases do treinamento de TI
+
+  /** O chefe lembra do treinamento de TI parado: o papel com as frases aparece na mesa do Marcos. */
+  const startQ3 = () => {
+    const s = scene();
+    if (!s) return;
+    s.ceoFacePlayer();
+    const lines = MISSAO_TREINAMENTO.call.map((t, i, all) =>
+      ceo(t, i === 0 ? 'ceo-bravo-a' : 'ceo-feliz-b', i === all.length - 1 ? { continueLabel: 'Claro, chefe!' } : {}),
+    );
+    say(lines, () => {
+      const sc = scene();
+      if (!sc) return;
+      setQ3('working');
+      sc.setTrainingPaper(true);
+      sc.setMarks([{ x: TRAINING_PAPER.x + 13, y: TRAINING_PAPER.y - 4 }]);
+      sc.setSpots([{ id: 'papel', zone: TRAINING_ZONE }]);
+      setToast(MISSAO_TREINAMENTO.go);
+      backToExplore();
+    });
+  };
+
+  const onSpotQ3 = (id: string) => {
+    if (phaseRef.current !== 'explore' || id !== 'papel' || q3Ref.current !== 'working') return;
+    scene()?.setFrozen(true);
+    setPhase('paperQ3');
+  };
+
+  /** Fechou o papel: completou as frases (+100 XP e comemora) ou deixou para depois. */
+  const finishPaper = (result: GameResult | null) => {
+    if (!result) {
+      setToast(MISSAO_TREINAMENTO.notYet);
+      backToExplore();
+      return;
+    }
+    const s = scene();
+    s?.setMarks([]);
+    s?.setSpots([]);
+    addXp(MISSAO_TREINAMENTO, MISSAO_TREINAMENTO.xp);
+    setQ3('done');
+    say(
+      [me(MISSAO_TREINAMENTO.success, { badge: `+${MISSAO_TREINAMENTO.xp} XP · Missão concluída!`, continueLabel: 'Uhuu!' })],
+      async () => {
+        const sc = scene();
+        if (!sc) return;
+        sc.setFrozen(true);
+        setPhase('dialog');
+        await sc.cheer();
+        if (!alive.current) return;
+        backToExplore();
+        onMissionComplete?.({ missionId: MISSAO_TREINAMENTO.id, xp: MISSAO_TREINAMENTO.xp, success: true, game: result });
       },
     );
   };
@@ -2659,7 +2735,14 @@ function OfficeDay({
     },
     pc: openStation,
     box: openBox,
-    spot: (id) => (fase === 4 ? (q2Ref.current === 'off' ? onSpotQ(id) : onSpotQ2(id)) : fase === 3 ? onSpotP1(id) : fase === 2 ? onSpotF2(id) : onSpot(id)),
+    spot: (id) =>
+      fase === 4
+        ? q3Ref.current !== 'off'
+          ? onSpotQ3(id)
+          : q2Ref.current !== 'off'
+            ? onSpotQ2(id)
+            : onSpotQ(id)
+        : fase === 3 ? onSpotP1(id) : fase === 2 ? onSpotF2(id) : onSpot(id),
     pickup: (id, at) => (fase === 3 ? pickPart(id, at) : pickUp(id)),
     room: (r) => {
       if (!started.current) {
@@ -2689,7 +2772,16 @@ function OfficeDay({
   // ------------------------------------------------------------ tela
 
   let objective: { title: string; text: string; done: boolean };
-  if (fase === 4 && q2 !== 'off') {
+  if (fase === 4 && q3 !== 'off') {
+    objective =
+      q3 === 'done'
+        ? {
+            title: 'Missão concluída:',
+            text: `${MISSAO_TREINAMENTO.title} (+${MISSAO_TREINAMENTO.xp} XP). Explore o escritório à vontade.`,
+            done: true,
+          }
+        : { title: `Fase 4 · Missão 3: ${MISSAO_TREINAMENTO.title}.`, text: OBJETIVOS.treinamento, done: false };
+  } else if (fase === 4 && q2 !== 'off') {
     const title = `Fase 4 · Missão 2: ${MISSAO_IMPRESSAO.title}.`;
     if (q2 === 'done')
       objective = {
@@ -3132,6 +3224,9 @@ function OfficeDay({
         {phase === 'projetor' && <ProjetorModal state={setup} onChange={setSetup} onClose={closeProjector} />}
         {phase === 'pcImpressao' && <PcImpressaoModal state={printer} onChange={setPrinter} onClose={closePcImpressao} />}
         {phase === 'impressora' && <ImpressoraModal state={printer} onChange={setPrinter} onClose={closeImpressora} />}
+        {phase === 'paperQ3' && (
+          <PapelOverlay heading={MISSAO_TREINAMENTO.heading} game={trainingPhrases ?? FRASES_TREINAMENTO_PADRAO} onClose={finishPaper} />
+        )}
         {phase === 'dreamP5' && (
           <SonhoOverlay heading={MISSAO_BANHEIRO.dreamHeading} game={bathroomWordSearch ?? CACA_PALAVRAS_BANHEIRO_PADRAO} onClose={finishDream} />
         )}

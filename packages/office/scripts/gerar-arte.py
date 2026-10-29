@@ -2967,6 +2967,17 @@ def make_impressora():
         json.dump({'w': IW, 'h': IH, **IMPRESSORA}, f, indent=1)
 
 
+def f_paper_sheet():
+    """A folha das frases do treinamento de TI, esquecida em cima da mesa do Marcos."""
+    c = Canvas(13, 9)
+    c.rect(1, 1, 11, 7, '#fbfaf5')
+    c.vline(3, 1, 7, '#e8a2a2')  # margem
+    for y in (3, 5, 7):
+        c.hline(4, y, 7, '#9db7e0')
+    c.rect(9, 0, 2, 3, '#9aa1ab')  # clipe
+    return c.outline()
+
+
 def f_copies():
     """O maço das 10 cópias impressas, em cima da impressora."""
     c = Canvas(14, 8)
@@ -3071,6 +3082,7 @@ def build():
     add('poca', f_puddle(), None, 'fx')
     add('vontade', f_urge(), None, 'fx')
     add('copias', f_copies(), None, 'fx')
+    add('papel-frases', f_paper_sheet(), None, 'fx')
     add('painel-alarme', f_alarm_panel(), (3, 22, 8, 4))
     add('placa-arduino', f_board_floor('arduino'), None, 'fx')
     add('placa-raspberry', f_board_floor('raspberry'), None, 'fx')

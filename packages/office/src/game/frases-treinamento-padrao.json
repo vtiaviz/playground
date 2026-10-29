@@ -1,0 +1,94 @@
+{
+ "title": "Treinamento de TI: os periféricos",
+ "sentences": [
+  {
+   "segments": [
+    "Para mostrar a tela do notebook na parede da sala de reuniões, usamos o ",
+    "."
+   ],
+   "answers": [
+    "projetor"
+   ],
+   "explanation": "O projetor é um periférico de saída: mostra a imagem ampliada."
+  },
+  {
+   "segments": [
+    "A ",
+    " filma quem está na frente do computador durante uma vídeo chamada."
+   ],
+   "answers": [
+    "webcam"
+   ],
+   "explanation": "A webcam é um periférico de entrada de vídeo."
+  },
+  {
+   "segments": [
+    "O ",
+    " capta a nossa voz, e as ",
+    " tocam o som do computador."
+   ],
+   "answers": [
+    "microfone",
+    "caixas de som"
+   ],
+   "explanation": ""
+  },
+  {
+   "segments": [
+    "Para a impressora funcionar pela rede, o cabo de rede vai na entrada ",
+    " dela."
+   ],
+   "answers": [
+    "LAN"
+   ],
+   "explanation": "O conector do cabo de rede se chama RJ45."
+  },
+  {
+   "segments": [
+    "O cabo ",
+    " tem o conector azul, com 15 pinos, e só leva a imagem."
+   ],
+   "answers": [
+    "VGA"
+   ],
+   "explanation": "O HDMI leva a imagem e o som pelo mesmo cabo."
+  },
+  {
+   "segments": [
+    "O ",
+    " guarda arquivos e se liga na entrada ",
+    " do computador."
+   ],
+   "answers": [
+    "pen drive",
+    "USB"
+   ],
+   "explanation": ""
+  },
+  {
+   "segments": [
+    "Antes de imprimir, confira a ",
+    " para ver como a página vai sair."
+   ],
+   "answers": [
+    "pré-visualização"
+   ],
+   "explanation": "No Word, fica em Arquivo → Imprimir."
+  },
+  {
+   "segments": [
+    "O ",
+    " transforma uma folha de papel em uma imagem no computador."
+   ],
+   "answers": [
+    "scanner"
+   ],
+   "explanation": "O scanner é um periférico de entrada."
+  }
+ ],
+ "decoys": [
+  "teclado",
+  "HDMI",
+  "mouse"
+ ]
+}

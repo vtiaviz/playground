@@ -1033,6 +1033,21 @@ direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 
 - **Para testar:** `?fase=4&missao=2` começa direto nesta missão (o projetor conta como feito). No componente:
   `<OfficeGame fase={4} startAt={2} />`.
 
+### Missão 3: as frases do treinamento de TI (+100 XP)
+
+1. Depois da comemoração das cópias, o chefe lembra que, com o Marcos doente, o **treinamento de TI** dos
+   funcionários ficou parado: as frases estão num **papel em cima da mesa do Marcos**, na Sala de TI.
+2. Aparece a folha na mesa, com o **!** em cima. Chegando na frente da mesa, abre o modal em forma de **folha de papel
+   pautado** (clipe, margem vermelha, mancha de café) com o **Complete as Frases** da biblioteca.
+3. Completar e enviar → **Pronto ▶** → **+100 XP** e o ESTAGIÁRIO comemora. **✕ Fechar** antes de terminar deixa o
+   papel na mesa para continuar depois.
+
+- **Qual jogo:** na página do instrutor, **"Treinamento de TI, 4º dia (Complete as Frases)"** (de preferência um
+  diferente das frases do quadro branco). Sem nenhum salvo, usa um de exemplo sobre os periféricos:
+  `packages/office/src/game/frases-treinamento-padrao.json`.
+- **Para testar:** `?fase=4&missao=3` começa direto nesta missão. No componente:
+  `<OfficeGame fase={4} startAt={3} trainingPhrases={...} />`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -1133,6 +1148,9 @@ direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 
     (diz o que falta) → rede na USB (não encaixa) → rede na LAN e energia na AC → **✓ Confirmar** (visor aceso) → PC:
     **Pronta (on-line)** → Cópias 5 (avisa) → Cópias 10 → **Imprimir** → cópias em cima da impressora → pegar
     (**📄 10 cópias**) → Sala de Reuniões → o chefe vem, agradece, **+100 XP**, e os dois comemoram.
+32. Fase 4, missão 3 (`?fase=4&missao=3`, ou seguindo depois das cópias): o chefe pede as frases do treinamento → **!**
+    no papel da mesa do Marcos → chegar na frente da mesa → folha de papel com o Complete as Frases → **✕ Fechar**
+    (continua depois) → voltar → completar e enviar → **Pronto ▶** → **+100 XP** e o ESTAGIÁRIO comemora.
 
 ## Correções incluídas desde a Fase 1
 
