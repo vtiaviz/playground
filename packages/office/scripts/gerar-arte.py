@@ -1866,6 +1866,300 @@ def f_note(kind):
     return c.outline()
 
 
+# ---------------------------------------------------------------- fase 3, missão 1: peças de hardware
+
+PCB, PCB_L, PCB_D = '#2f7a4a', '#46995f', '#22583a'
+CHIP = '#1d2027'
+METAL, METAL_L, METAL_D = '#b9c0c9', '#dfe4ea', '#8a929c'
+DARK, DARK_L = '#2b2f37', '#454b57'
+LABEL = '#f7f4ea'
+
+# etiqueta (adesivo) de cada desenho grande: x, y, w, h em pixels de arte (o React escreve o texto em cima)
+LABELS = {}
+
+
+def disc(c, cx, cy, r, color):
+    for y in range(cy - r, cy + r + 1):
+        for x in range(cx - r, cx + r + 1):
+            if (x - cx) ** 2 + (y - cy) ** 2 <= r * r + r * 0.6:
+                c.p(x, y, color)
+
+
+def label(c, name, x, y, w, h):
+    c.rect(x, y, w, h, LABEL)
+    c.hline(x, y + h - 1, w, '#d8d2c0')
+    LABELS[name] = [x, y, w, h]
+
+
+def screws(c, x, y, w, h, col=METAL_D):
+    for sx, sy in ((x + 2, y + 2), (x + w - 3, y + 2), (x + 2, y + h - 3), (x + w - 3, y + h - 3)):
+        c.p(sx, sy, col)
+
+
+def big_hd(kind):
+    """HD visto de cima: 3,5" (desktop) ou 2,5" (notebook)."""
+    c = Canvas(80, 56)
+    name = 'hd-35' if kind == '35' else 'hd-25'
+    x, y, w, h = (8, 4, 64, 46) if kind == '35' else (16, 10, 48, 36)
+    c.rect(x, y, w, h, METAL)
+    c.hline(x, y, w, METAL_L)
+    c.vline(x, y, h, METAL_L)
+    c.hline(x, y + h - 1, w, METAL_D)
+    screws(c, x, y, w, h)
+    # tampa com o "rebaixo" do motor
+    disc(c, x + w - 14, y + 13, 6 if kind == '35' else 5, METAL_D)
+    disc(c, x + w - 14, y + 13, 4 if kind == '35' else 3, METAL)
+    # conectores SATA na borda de baixo
+    c.rect(x + 6, y + h, 10, 3, CHIP)
+    c.rect(x + 18, y + h, 6, 3, CHIP)
+    if kind == '35':
+        label(c, name, x + 6, y + 18, 40, 22)
+    else:
+        label(c, name, x + 5, y + 16, 34, 16)
+    return c.outline()
+
+
+def big_ssd(kind):
+    """SSD: 2,5" SATA (caixinha) ou M.2 (pente)."""
+    c = Canvas(80, 56)
+    if kind == 'sata':
+        x, y, w, h = 16, 10, 48, 36
+        c.rect(x, y, w, h, DARK)
+        c.hline(x, y, w, DARK_L)
+        c.vline(x, y, h, DARK_L)
+        screws(c, x, y, w, h, '#5a616d')
+        c.rect(x + 6, y + h, 10, 3, CHIP)
+        c.rect(x + 18, y + h, 6, 3, CHIP)
+        c.rect(x + 3, y + 4, w - 6, 3, '#e05a3a')  # faixa colorida
+        label(c, 'ssd-sata', x + 5, y + 11, 38, 19)
+        return c.outline()
+    x, y, w, h = 4, 18, 72, 20
+    c.rect(x, y, w, h, PCB)
+    c.hline(x, y, w, PCB_L)
+    c.hline(x, y + h - 1, w, PCB_D)
+    # contatos dourados com o chanfro (encaixe) na ponta esquerda
+    c.rect(x - 3, y + 2, 4, h - 4, GOLD)
+    c.rect(x - 3, y + 6, 4, 2, (0, 0, 0, 0))
+    # meia-lua do parafuso na outra ponta
+    c.rect(x + w - 3, y + h // 2 - 2, 3, 4, (0, 0, 0, 0))
+    c.rect(x + 6, y + 4, 10, 12, CHIP)  # controlador
+    label(c, 'ssd-m2', x + 20, y + 3, 42, 14)
+    return c.outline()
+
+
+def big_motherboard():
+    """Placa-mãe micro-ATX: soquete, slots de memória, PCI Express, conectores."""
+    c = Canvas(80, 56)
+    x, y, w, h = 14, 1, 52, 54
+    c.rect(x, y, w, h, '#25603f')
+    c.hline(x, y, w, '#357a52')
+    screws(c, x, y, w, h, '#c9b16a')
+    c.rect(x + 1, y + 2, 8, 20, METAL_D)  # conectores traseiros
+    c.rect(x + 2, y + 4, 6, 3, CHIP)
+    c.rect(x + 2, y + 10, 6, 3, '#3a6fd8')
+    c.rect(x + 13, y + 6, 16, 16, METAL)  # soquete do processador
+    c.rect(x + 15, y + 8, 12, 12, '#d9d0b0')
+    for k in range(0, 12, 2):
+        for j in range(0, 12, 2):
+            c.p(x + 15 + k, y + 8 + j, '#b7a777')
+    for k in range(2):  # slots de memória
+        c.rect(x + 34 + k * 5, y + 3, 3, 26, CHIP)
+        c.p(x + 35 + k * 5, y + 3, '#e8e8e8')
+        c.p(x + 35 + k * 5, y + 28, '#e8e8e8')
+    c.rect(x + 46, y + 4, 4, 10, CHIP)  # conector de energia 24 pinos
+    c.rect(x + 4, y + 30, 40, 3, CHIP)  # PCI Express x16
+    c.hline(x + 4, y + 31, 40, '#5a616d')
+    c.rect(x + 30, y + 36, 8, 8, CHIP)  # chipset
+    label(c, 'mb-matx', x + 3, y + 37, 26, 15)
+    return c.outline()
+
+
+def big_ram(kind):
+    """Pente de memória: DDR4, DDR3 (o chanfro muda de lugar) ou SODIMM (notebook)."""
+    c = Canvas(80, 56)
+    if kind == 'sodimm':
+        x, y, w, h, notch = 18, 14, 44, 26, 15
+    else:
+        x, y, w, h = 2, 16, 76, 22
+        notch = 40 if kind == 'ddr4' else 30
+    pcb = PCB if kind != 'ddr3' else '#2d6a8a'
+    c.rect(x, y, w, h, pcb)
+    c.hline(x, y, w, PCB_L if kind != 'ddr3' else '#4a8db0')
+    for k in range(w // 9):  # chips de memória
+        c.rect(x + 2 + k * 9, y + 3, 7, 10, CHIP)
+    c.rect(x + 1, y + h - 5, w - 2, 4, GOLD)  # contatos
+    for k in range(x + 2, x + w - 2, 2):
+        c.p(k, y + h - 4, '#b8912e')
+    c.rect(x + notch, y + h - 5, 2, 5, (0, 0, 0, 0))  # chanfro
+    c.rect(x - 1, y + 8, 2, 4, (0, 0, 0, 0))  # entalhes das travas
+    c.rect(x + w - 1, y + 8, 2, 4, (0, 0, 0, 0))
+    if kind == 'sodimm':
+        label(c, 'ram-sodimm', x + 4, y + 2, 36, 15)
+    else:
+        label(c, f'ram-{kind}', x + 14, y + 2, 46, 14)
+    return c.outline()
+
+
+def big_cpu(kind):
+    """Processador visto de cima: AM4 (pinos embaixo, aparecem na borda) ou LGA (entalhes nos lados, sem pinos)."""
+    c = Canvas(80, 56)
+    x, y, s = 18, 6, 44
+    c.rect(x, y, s, s, '#2f7a4a' if kind == 'am4' else '#3b5f8f')
+    if kind == 'lga':
+        c.rect(x - 1, y + 10, 3, 5, (0, 0, 0, 0))
+        c.rect(x + s - 2, y + 10, 3, 5, (0, 0, 0, 0))
+    else:
+        for k in range(x + 2, x + s - 2, 2):  # pontas dos pinos aparecendo embaixo
+            c.p(k, y + s, GOLD)
+            c.p(k, y + s + 1, GOLD)
+    c.rect(x + 4, y + 4, s - 8, s - 8, METAL)  # tampa metálica
+    c.hline(x + 4, y + 4, s - 8, METAL_L)
+    c.vline(x + 4, y + 4, s - 8, METAL_L)
+    c.hline(x + 4, y + s - 5, s - 8, METAL_D)
+    for k in range(4):  # triângulo dourado do canto (posição do pino 1)
+        c.hline(x + 1, y + s - 2 - k, 4 - k, GOLD)
+    label(c, f'cpu-{kind}', x + 7, y + 11, s - 14, 18)
+    return c.outline()
+
+
+def big_cooler():
+    """Cooler de processador: dissipador de alumínio com a ventoinha na frente."""
+    c = Canvas(80, 56)
+    x, y, w, h = 6, 6, 68, 44
+    for k in range(x, x + w, 3):  # aletas
+        c.rect(k, y, 2, h, METAL)
+        c.p(k, y, METAL_L)
+    c.rect(x + 2, y + h, 6, 3, '#c97b3a')  # tubos de cobre
+    c.rect(x + w - 8, y + h, 6, 3, '#c97b3a')
+    fx, fy, r = x + 21, y + 22, 20
+    c.rect(fx - r, fy - r, 2 * r, 2 * r, DARK)  # moldura da ventoinha
+    disc(c, fx, fy, r - 2, '#1a1d23')
+    for a in range(0, 360, 60):  # pás
+        import math
+        for t in range(4, r - 3):
+            px = fx + int(round(math.cos(math.radians(a + t * 3)) * t))
+            py = fy + int(round(math.sin(math.radians(a + t * 3)) * t))
+            c.p(px, py, '#5a616d')
+            c.p(px + 1, py, '#5a616d')
+    disc(c, fx, fy, 4, DARK_L)
+    label(c, 'cooler', x + 44, y + 12, 24, 20)
+    return c.outline()
+
+
+def big_psu():
+    """Fonte ATX: caixa com a grade da ventoinha e o maço de cabos."""
+    c = Canvas(80, 56)
+    x, y, w, h = 4, 6, 60, 44
+    c.rect(x, y, w, h, DARK)
+    c.hline(x, y, w, DARK_L)
+    c.vline(x, y, h, DARK_L)
+    screws(c, x, y, w, h, '#5a616d')
+    fx, fy, r = x + 16, y + 22, 13
+    disc(c, fx, fy, r, '#1a1d23')
+    for k in range(-r + 2, r - 1, 3):  # grade
+        c.hline(fx - r + 2, fy + k, 2 * r - 3, '#5a616d')
+    c.rect(x + w, y + 14, 10, 4, CHIP)  # cabos
+    c.rect(x + w, y + 20, 12, 4, '#e0b84a')
+    c.rect(x + w, y + 26, 9, 4, '#d9534f')
+    c.rect(x + w, y + 32, 11, 3, CHIP)
+    label(c, 'fonte', x + 32, y + 8, 26, 30)
+    return c.outline()
+
+
+def big_gpu(fans):
+    """Placa de vídeo: carcaça com 1 ou 2 ventoinhas, chapinha de metal e contatos PCI Express."""
+    c = Canvas(80, 56)
+    w = 74 if fans == 2 else 60
+    x, y, h = 4, 10, 30
+    c.rect(x, y - 2, 3, h + 8, METAL)  # chapinha (saídas de vídeo)
+    c.rect(x, y + 4, 2, 4, CHIP)
+    c.rect(x, y + 12, 2, 4, CHIP)
+    c.rect(x + 3, y, w - 3, h, DARK)
+    c.hline(x + 3, y, w - 3, DARK_L)
+    c.rect(x + 3, y + h, w - 3, 4, PCB)  # placa por baixo da carcaça
+    c.rect(x + 12, y + h + 2, 30 if fans == 2 else 24, 4, GOLD)  # contatos
+    c.rect(x + 20, y + h + 2, 2, 4, (0, 0, 0, 0))
+    for k in range(fans):
+        cx = x + 13 + k * 19
+        disc(c, cx, y + 15, 9, '#1a1d23')
+        for a in range(0, 360, 72):
+            import math
+            for t in range(3, 8):
+                c.p(cx + int(round(math.cos(math.radians(a + t * 8)) * t)), y + 15 + int(round(math.sin(math.radians(a + t * 8)) * t)), '#5a616d')
+        disc(c, cx, y + 15, 2, DARK_L)
+    lx = x + 13 + (fans - 1) * 19 + 12
+    label(c, f'gpu-{fans}', lx, y + 4, x + w - lx - 3, 20)
+    return c.outline()
+
+
+def f_part_floor(kind):
+    """Peça caída no chão (vista de cima, pequena) para cada tipo."""
+    if kind == 'hd':
+        c = Canvas(11, 8)
+        c.rect(0, 0, 11, 8, METAL)
+        c.rect(2, 2, 5, 4, LABEL)
+        c.p(9, 2, METAL_D)
+    elif kind == 'ssd':
+        c = Canvas(12, 5)
+        c.rect(1, 0, 11, 5, PCB)
+        c.rect(0, 1, 1, 3, GOLD)
+        c.rect(3, 1, 3, 3, CHIP)
+        c.rect(7, 1, 4, 3, LABEL)
+    elif kind == 'placa-mae':
+        c = Canvas(12, 12)
+        c.rect(0, 0, 12, 12, '#25603f')
+        c.rect(3, 2, 4, 4, METAL)
+        c.vline(9, 1, 6, CHIP)
+        c.hline(1, 8, 9, CHIP)
+    elif kind == 'ram':
+        c = Canvas(14, 5)
+        c.rect(0, 0, 14, 5, PCB)
+        for k in range(4):
+            c.rect(1 + k * 3, 1, 2, 2, CHIP)
+        c.hline(0, 4, 14, GOLD)
+    elif kind == 'processador':
+        c = Canvas(8, 8)
+        c.rect(0, 0, 8, 8, '#2f7a4a')
+        c.rect(1, 1, 6, 6, METAL)
+        c.p(0, 7, GOLD)
+    elif kind == 'cooler':
+        c = Canvas(11, 11)
+        c.rect(0, 0, 11, 11, METAL)
+        disc(c, 5, 5, 4, '#1a1d23')
+        c.p(5, 5, DARK_L)
+    elif kind == 'fonte':
+        c = Canvas(12, 9)
+        c.rect(0, 0, 12, 9, DARK)
+        disc(c, 4, 4, 3, '#1a1d23')
+        c.rect(8, 2, 3, 5, LABEL)
+    else:  # placa de vídeo
+        c = Canvas(14, 7)
+        c.rect(0, 0, 14, 6, DARK)
+        disc(c, 4, 3, 2, '#1a1d23')
+        disc(c, 9, 3, 2, '#1a1d23')
+        c.hline(3, 6, 8, GOLD)
+    return c.outline()
+
+
+PART_KINDS = ('hd', 'ssd', 'placa-mae', 'ram', 'processador', 'cooler', 'fonte', 'placa-video')
+
+
+def make_pecas():
+    out = os.path.join(ASSETS, 'pecas')
+    os.makedirs(out, exist_ok=True)
+    imgs = {
+        'hd-35': big_hd('35'), 'hd-25': big_hd('25'), 'ssd-sata': big_ssd('sata'), 'ssd-m2': big_ssd('m2'),
+        'mb-matx': big_motherboard(), 'ram-ddr4': big_ram('ddr4'), 'ram-ddr3': big_ram('ddr3'),
+        'ram-sodimm': big_ram('sodimm'), 'cpu-am4': big_cpu('am4'), 'cpu-lga': big_cpu('lga'), 'cooler': big_cooler(),
+        'fonte': big_psu(), 'gpu-2': big_gpu(2), 'gpu-1': big_gpu(1),
+    }
+    for name, cv in imgs.items():
+        cv.im.resize((cv.w * BIG, cv.h * BIG), Image.NEAREST).save(os.path.join(out, f'{name}.png'), optimize=True)
+    with open(os.path.join(out, 'etiquetas.json'), 'w') as f:
+        json.dump({'w': 80, 'h': 56, 'labels': LABELS}, f, indent=1)
+
+
+
 def make_placas():
     out = os.path.join(ASSETS, 'placas')
     os.makedirs(out, exist_ok=True)
@@ -1886,6 +2180,7 @@ def build():
     make_cursor()
     make_equipamentos()
     make_placas()
+    make_pecas()
 
     # tipos de móvel: (canvas, área de colisão em px de arte relativa ao canto do sprite, camada)
     #   camada "wall" = pendurado na parede (sem colisão, fica atrás de tudo)
@@ -1963,6 +2258,8 @@ def build():
     add('placa-arduino', f_board_floor('arduino'), None, 'fx')
     add('placa-raspberry', f_board_floor('raspberry'), None, 'fx')
     add('brilho-placa', f_board_glow(), None, 'fx')
+    for kind in PART_KINDS:
+        add(f'peca-{kind}', f_part_floor(kind), None, 'fx')
     add('lupa', f_magnifier(), None, 'fx')
     for kind in ('papel', 'pasta', 'caixa', 'cabo', 'livro', 'grampeador'):
         add(f'bagunca-{kind}', f_mess(kind), None, 'fx')

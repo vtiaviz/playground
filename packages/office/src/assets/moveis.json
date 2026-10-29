@@ -1420,10 +1420,170 @@
     "h": 40
    }
   },
-  "lupa": {
+  "peca-hd": {
    "frame": {
     "x": 368,
     "y": 646,
+    "w": 22,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 16
+   }
+  },
+  "peca-ssd": {
+   "frame": {
+    "x": 392,
+    "y": 646,
+    "w": 24,
+    "h": 10
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 10
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 10
+   }
+  },
+  "peca-placa-mae": {
+   "frame": {
+    "x": 418,
+    "y": 646,
+    "w": 24,
+    "h": 24
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 24
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 24
+   }
+  },
+  "peca-ram": {
+   "frame": {
+    "x": 444,
+    "y": 646,
+    "w": 28,
+    "h": 10
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 28,
+    "h": 10
+   },
+   "sourceSize": {
+    "w": 28,
+    "h": 10
+   }
+  },
+  "peca-processador": {
+   "frame": {
+    "x": 474,
+    "y": 646,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "peca-cooler": {
+   "frame": {
+    "x": 0,
+    "y": 716,
+    "w": 22,
+    "h": 22
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 22
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 22
+   }
+  },
+  "peca-fonte": {
+   "frame": {
+    "x": 24,
+    "y": 716,
+    "w": 24,
+    "h": 18
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 18
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 18
+   }
+  },
+  "peca-placa-video": {
+   "frame": {
+    "x": 50,
+    "y": 716,
+    "w": 28,
+    "h": 14
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 28,
+    "h": 14
+   },
+   "sourceSize": {
+    "w": 28,
+    "h": 14
+   }
+  },
+  "lupa": {
+   "frame": {
+    "x": 80,
+    "y": 716,
     "w": 28,
     "h": 28
    },
@@ -1442,8 +1602,8 @@
   },
   "bagunca-papel": {
    "frame": {
-    "x": 398,
-    "y": 646,
+    "x": 110,
+    "y": 716,
     "w": 14,
     "h": 10
    },
@@ -1462,8 +1622,8 @@
   },
   "bagunca-pasta": {
    "frame": {
-    "x": 414,
-    "y": 646,
+    "x": 126,
+    "y": 716,
     "w": 16,
     "h": 12
    },
@@ -1482,8 +1642,8 @@
   },
   "bagunca-caixa": {
    "frame": {
-    "x": 432,
-    "y": 646,
+    "x": 144,
+    "y": 716,
     "w": 14,
     "h": 12
    },
@@ -1502,8 +1662,8 @@
   },
   "bagunca-cabo": {
    "frame": {
-    "x": 448,
-    "y": 646,
+    "x": 160,
+    "y": 716,
     "w": 16,
     "h": 10
    },
@@ -1522,8 +1682,8 @@
   },
   "bagunca-livro": {
    "frame": {
-    "x": 466,
-    "y": 646,
+    "x": 178,
+    "y": 716,
     "w": 14,
     "h": 12
    },
@@ -1542,8 +1702,8 @@
   },
   "bagunca-grampeador": {
    "frame": {
-    "x": 482,
-    "y": 646,
+    "x": 194,
+    "y": 716,
     "w": 14,
     "h": 8
    },
@@ -1562,8 +1722,8 @@
   },
   "adesivo-desktop": {
    "frame": {
-    "x": 498,
-    "y": 646,
+    "x": 210,
+    "y": 716,
     "w": 12,
     "h": 10
    },
@@ -1582,7 +1742,7 @@
   },
   "adesivo-notebook": {
    "frame": {
-    "x": 0,
+    "x": 224,
     "y": 716,
     "w": 12,
     "h": 10
@@ -1602,7 +1762,7 @@
   },
   "adesivo-servidor": {
    "frame": {
-    "x": 14,
+    "x": 238,
     "y": 716,
     "w": 12,
     "h": 10
@@ -1622,7 +1782,7 @@
   },
   "adesivo-mainframe": {
    "frame": {
-    "x": 28,
+    "x": 252,
     "y": 716,
     "w": 12,
     "h": 10
@@ -1642,7 +1802,7 @@
   },
   "adesivo-tablet": {
    "frame": {
-    "x": 42,
+    "x": 266,
     "y": 716,
     "w": 12,
     "h": 10
@@ -1662,7 +1822,7 @@
   },
   "adesivo-smartphone": {
    "frame": {
-    "x": 56,
+    "x": 280,
     "y": 716,
     "w": 12,
     "h": 10
@@ -1682,7 +1842,7 @@
   },
   "colega-0": {
    "frame": {
-    "x": 70,
+    "x": 294,
     "y": 716,
     "w": 40,
     "h": 48
@@ -1702,7 +1862,7 @@
   },
   "colega-0-b": {
    "frame": {
-    "x": 112,
+    "x": 336,
     "y": 716,
     "w": 40,
     "h": 48
@@ -1722,7 +1882,7 @@
   },
   "colega-1": {
    "frame": {
-    "x": 154,
+    "x": 378,
     "y": 716,
     "w": 40,
     "h": 48
@@ -1742,7 +1902,7 @@
   },
   "colega-1-b": {
    "frame": {
-    "x": 196,
+    "x": 420,
     "y": 716,
     "w": 40,
     "h": 48
@@ -1762,7 +1922,7 @@
   },
   "colega-2": {
    "frame": {
-    "x": 238,
+    "x": 462,
     "y": 716,
     "w": 40,
     "h": 48
@@ -1782,106 +1942,6 @@
   },
   "colega-2-b": {
    "frame": {
-    "x": 280,
-    "y": 716,
-    "w": 40,
-    "h": 48
-   },
-   "rotated": false,
-   "trimmed": false,
-   "spriteSourceSize": {
-    "x": 0,
-    "y": 0,
-    "w": 40,
-    "h": 48
-   },
-   "sourceSize": {
-    "w": 40,
-    "h": 48
-   }
-  },
-  "colega-3": {
-   "frame": {
-    "x": 322,
-    "y": 716,
-    "w": 40,
-    "h": 48
-   },
-   "rotated": false,
-   "trimmed": false,
-   "spriteSourceSize": {
-    "x": 0,
-    "y": 0,
-    "w": 40,
-    "h": 48
-   },
-   "sourceSize": {
-    "w": 40,
-    "h": 48
-   }
-  },
-  "colega-3-b": {
-   "frame": {
-    "x": 364,
-    "y": 716,
-    "w": 40,
-    "h": 48
-   },
-   "rotated": false,
-   "trimmed": false,
-   "spriteSourceSize": {
-    "x": 0,
-    "y": 0,
-    "w": 40,
-    "h": 48
-   },
-   "sourceSize": {
-    "w": 40,
-    "h": 48
-   }
-  },
-  "colega-4": {
-   "frame": {
-    "x": 406,
-    "y": 716,
-    "w": 40,
-    "h": 48
-   },
-   "rotated": false,
-   "trimmed": false,
-   "spriteSourceSize": {
-    "x": 0,
-    "y": 0,
-    "w": 40,
-    "h": 48
-   },
-   "sourceSize": {
-    "w": 40,
-    "h": 48
-   }
-  },
-  "colega-4-b": {
-   "frame": {
-    "x": 448,
-    "y": 716,
-    "w": 40,
-    "h": 48
-   },
-   "rotated": false,
-   "trimmed": false,
-   "spriteSourceSize": {
-    "x": 0,
-    "y": 0,
-    "w": 40,
-    "h": 48
-   },
-   "sourceSize": {
-    "w": 40,
-    "h": 48
-   }
-  },
-  "colega-5": {
-   "frame": {
     "x": 0,
     "y": 766,
     "w": 40,
@@ -1900,7 +1960,7 @@
     "h": 48
    }
   },
-  "colega-5-b": {
+  "colega-3": {
    "frame": {
     "x": 42,
     "y": 766,
@@ -1920,7 +1980,7 @@
     "h": 48
    }
   },
-  "colega-6": {
+  "colega-3-b": {
    "frame": {
     "x": 84,
     "y": 766,
@@ -1940,9 +2000,109 @@
     "h": 48
    }
   },
-  "colega-6-b": {
+  "colega-4": {
    "frame": {
     "x": 126,
+    "y": 766,
+    "w": 40,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 48
+   }
+  },
+  "colega-4-b": {
+   "frame": {
+    "x": 168,
+    "y": 766,
+    "w": 40,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 48
+   }
+  },
+  "colega-5": {
+   "frame": {
+    "x": 210,
+    "y": 766,
+    "w": 40,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 48
+   }
+  },
+  "colega-5-b": {
+   "frame": {
+    "x": 252,
+    "y": 766,
+    "w": 40,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 48
+   }
+  },
+  "colega-6": {
+   "frame": {
+    "x": 294,
+    "y": 766,
+    "w": 40,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 48
+   }
+  },
+  "colega-6-b": {
+   "frame": {
+    "x": 336,
     "y": 766,
     "w": 40,
     "h": 48
