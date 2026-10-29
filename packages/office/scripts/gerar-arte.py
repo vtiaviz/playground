@@ -2978,6 +2978,19 @@ def f_paper_sheet():
     return c.outline()
 
 
+def f_quiz_sheet():
+    """A segunda folha, com o quiz do treinamento: perguntas com as bolinhas das alternativas."""
+    c = Canvas(13, 9)
+    c.rect(1, 1, 11, 7, '#fbfaf5')
+    for y in (2, 5):
+        c.hline(2, y, 9, '#5f6775')  # pergunta
+        for x in (3, 6, 9):
+            c.p(x, y + 1, '#2f5f9e')  # alternativas
+    c.rect(9, 6, 2, 1, '#c0392b')  # "?" vermelho no canto
+    c.p(10, 5, '#c0392b')
+    return c.outline()
+
+
 def f_copies():
     """O maço das 10 cópias impressas, em cima da impressora."""
     c = Canvas(14, 8)
@@ -3083,6 +3096,7 @@ def build():
     add('vontade', f_urge(), None, 'fx')
     add('copias', f_copies(), None, 'fx')
     add('papel-frases', f_paper_sheet(), None, 'fx')
+    add('papel-quiz', f_quiz_sheet(), None, 'fx')
     add('painel-alarme', f_alarm_panel(), (3, 22, 8, 4))
     add('placa-arduino', f_board_floor('arduino'), None, 'fx')
     add('placa-raspberry', f_board_floor('raspberry'), None, 'fx')

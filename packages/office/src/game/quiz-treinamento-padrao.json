@@ -1,0 +1,45 @@
+{
+  "title": "Quiz do treinamento: os periféricos",
+  "questions": [
+    {
+      "text": "Qual destes é um periférico de SAÍDA?",
+      "options": ["Webcam", "Teclado", "Projetor", "Microfone"],
+      "correct": 2
+    },
+    {
+      "text": "A imagem do projetor está embaçada na parede. O que você ajusta?",
+      "options": ["O volume", "O foco", "O brilho do notebook", "O cabo de energia"],
+      "correct": 1
+    },
+    {
+      "text": "O computador diz que a impressora está off-line. O que é bom conferir primeiro?",
+      "options": ["Se ela está ligada na energia e na rede", "Se o papel é colorido", "Se o mouse está funcionando", "Se o monitor está ligado"],
+      "correct": 0
+    },
+    {
+      "text": "Em qual entrada vai o cabo de rede (conector RJ45)?",
+      "options": ["USB", "HDMI", "VGA", "LAN"],
+      "correct": 3
+    },
+    {
+      "text": "Qual cabo leva a imagem E o som pelo mesmo fio?",
+      "options": ["VGA", "HDMI", "Cabo de força", "P2"],
+      "correct": 1
+    },
+    {
+      "text": "Você ligou uma webcam nova na USB. O que o sistema faz sozinho antes de ela funcionar?",
+      "options": ["Formata o computador", "Instala o driver", "Desliga a internet", "Apaga os arquivos"],
+      "correct": 1
+    },
+    {
+      "text": "Para imprimir 10 cópias de um documento no Word, você vai em:",
+      "options": ["Arquivo → Imprimir e muda Cópias para 10", "Inserir → Tabela", "Imprime uma e tira xerox", "Arquivo → Salvar como"],
+      "correct": 0
+    },
+    {
+      "text": "Qual destes é um periférico de ENTRADA?",
+      "options": ["Impressora", "Caixa de som", "Scanner", "Monitor"],
+      "correct": 2
+    }
+  ]
+}

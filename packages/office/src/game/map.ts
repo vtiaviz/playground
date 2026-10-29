@@ -615,3 +615,5 @@ export const PRINTER: { zone: Rect; copies: Point; top: Point } = {
 export const TRAINING_PAPER: Point = { x: itDesk.x + 12, y: itDesk.y + 26 };
 /** Na frente da mesa do Marcos (pés do ESTAGIÁRIO): abre o papel. */
 export const TRAINING_ZONE: Rect = { x: itDesk.foot!.x + 6, y: itDesk.foot!.y + itDesk.foot!.h, w: itDesk.foot!.w - 12, h: 34 };
+/** A segunda folha (o quiz): sai deslizando de baixo da primeira e para do outro lado do teclado (fase 4, missão 4). */
+export const QUIZ_PAPER: Point = { x: TRAINING_PAPER.x + 58, y: TRAINING_PAPER.y - 2 };

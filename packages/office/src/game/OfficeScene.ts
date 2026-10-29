@@ -48,6 +48,7 @@ import {
   PRINT_DESK,
   PRINTER,
   TRAINING_PAPER,
+  QUIZ_PAPER,
   besidePlayer,
   landingSpots,
   PICKUP_RADIUS,
@@ -189,6 +190,8 @@ export class OfficeScene extends Phaser.Scene {
   private marks: Phaser.GameObjects.Image[] = [];
   /** Fase 4, missão 3: a folha das frases do treinamento em cima da mesa do Marcos. */
   private trainingPaper: Phaser.GameObjects.Image | null = null;
+  /** Fase 4, missão 4: a segunda folha, com o quiz. */
+  private quizPaper: Phaser.GameObjects.Image | null = null;
 
   constructor() {
     super('office');
@@ -1517,11 +1520,11 @@ export class OfficeScene extends Phaser.Scene {
     this.setRhTablet(true, alert);
   }
 
-  /** O ESTAGIÁRIO leva um susto: vira para a Rita, dá um pulinho e aparece o "!" em cima dele. */
-  async startle() {
+  /** O ESTAGIÁRIO leva um susto: vira para a Rita (ou para `at`), dá um pulinho e aparece o "!" em cima dele. */
+  async startle(at: Point = this.rh) {
     const p = this.player;
-    const dx = this.rh.x - p.x;
-    const dy = this.rh.y - p.y;
+    const dx = at.x - p.x;
+    const dy = at.y - p.y;
     this.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
     p.anims.stop();
     p.setFrame(ROW[this.facing] * FRAME.cols + 2);
@@ -1802,6 +1805,26 @@ export class OfficeScene extends Phaser.Scene {
     if (!on) return;
     const at = TRAINING_PAPER;
     this.trainingPaper = this.add.image(at.x, at.y, 'moveis', 'papel-frases').setOrigin(0).setDepth(at.y + 40);
+  }
+
+  /** A segunda folha, com o quiz: aparece deslizando de baixo da primeira (`slide`) ou já no lugar. */
+  setQuizPaper(on: boolean, slide = false) {
+    this.quizPaper?.destroy();
+    this.quizPaper = null;
+    if (!on) return;
+    const at = QUIZ_PAPER;
+    const img = this.add.image(at.x, at.y, 'moveis', 'papel-quiz').setOrigin(0).setDepth(TRAINING_PAPER.y + 41);
+    this.quizPaper = img;
+    if (!slide) return;
+    img.setPosition(TRAINING_PAPER.x, TRAINING_PAPER.y).setDepth(TRAINING_PAPER.y + 39);
+    this.tweens.add({
+      targets: img,
+      x: at.x,
+      y: at.y,
+      duration: 500,
+      ease: 'Back.easeOut',
+      onComplete: () => img.setDepth(TRAINING_PAPER.y + 41),
+    });
   }
 
   /** O chefe (em pé) vem até o lado do ESTAGIÁRIO, e os dois ficam de frente. */

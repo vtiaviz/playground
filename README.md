@@ -1048,6 +1048,20 @@ direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 
 - **Para testar:** `?fase=4&missao=3` começa direto nesta missão. No componente:
   `<OfficeGame fase={4} startAt={3} trainingPhrases={...} />`.
 
+### Missão 4: o quiz do treinamento de TI (+100 XP)
+
+1. Logo depois de comemorar as frases, o ESTAGIÁRIO **leva um susto** (pulinho e **!**): uma **segunda folha** sai
+   deslizando de baixo da primeira e para do outro lado do teclado. *"Tinha outra folha embaixo dessa… É um quiz!"*
+2. **Ver a folha** abre a mesma folha de papel pautado, agora com o **Quiz** da biblioteca.
+3. Respondeu tudo → **Pronto ▶** → **+100 XP** e o ESTAGIÁRIO comemora. **✕ Fechar** antes de terminar deixa a folha
+   na mesa (com o **!**) para continuar depois.
+
+- **Qual jogo:** na página do instrutor, **"Quiz do treinamento de TI, 4º dia (Quiz)"** (de preferência um quarto
+  quiz, diferente dos outros). Sem nenhum salvo, usa um de exemplo sobre o que o ESTAGIÁRIO fez no 4º dia (projetor,
+  impressora, cabos, driver, periféricos de entrada e saída): `packages/office/src/game/quiz-treinamento-padrao.json`.
+- **Para testar:** `?fase=4&missao=4` começa com a segunda folha já na mesa do Marcos. No componente:
+  `<OfficeGame fase={4} startAt={4} trainingQuiz={...} />`.
+
 ## Checklist manual do Office
 
 1. `npm install` e `npm run dev:office` (ou entrar como instrutor → **🏢 Office (teste)**).
@@ -1151,6 +1165,9 @@ direto: `?fase=4` na demo, ou `<OfficeGame fase={4} />` (começa com o XP dos 3 
 32. Fase 4, missão 3 (`?fase=4&missao=3`, ou seguindo depois das cópias): o chefe pede as frases do treinamento → **!**
     no papel da mesa do Marcos → chegar na frente da mesa → folha de papel com o Complete as Frases → **✕ Fechar**
     (continua depois) → voltar → completar e enviar → **Pronto ▶** → **+100 XP** e o ESTAGIÁRIO comemora.
+33. Fase 4, missão 4 (`?fase=4&missao=4`, ou seguindo depois das frases): susto (pulinho e **!**) e a segunda folha
+    sai de baixo da primeira → **Ver a folha** → quiz na folha de papel → **✕ Fechar** → **!** na segunda folha →
+    voltar → responder tudo → **Pronto ▶** → **+100 XP** e o ESTAGIÁRIO comemora.
 
 ## Correções incluídas desde a Fase 1
 
